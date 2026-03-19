@@ -332,18 +332,59 @@ export class InnovatAgent {
   private async navigateToGeneralAlumnos(): Promise<AutomationResult> {
     try {
       const page = this.browser.getPage();
-      console.log(`[InnovatAgent] Navegando a General de Alumnos...`);
-      const menuItems = ['Escolar', 'Información Alumnos', 'General de alumnos'];
+      console.log(`[InnovatAgent] ===== NAVEGACIÓN A GENERAL DE ALUMNOS (BRUTE FORCE) =====`);
 
-      for (const item of menuItems) {
-        const el = page.locator('li, a, span').filter({ hasText: new RegExp(`^${item}$`, 'i') }).first();
-        await el.waitFor({ state: 'visible', timeout: 8000 });
-        await el.click({ force: true });
-        await this.browser.wait(1500);
-      }
+      // 1. Cerrar cualquier menú abierto
+      await page.evaluate(() => {
+        const activeMenus = document.querySelectorAll('li.act_section');
+        activeMenus.forEach(m => (m as HTMLElement).click());
+      }).catch(() => {});
+      await this.browser.wait(1500);
+
+      // 2. Click en Escolar
+      console.log(`[InnovatAgent] Paso 1: Click en Escolar...`);
+      const clickedEscolar = await page.evaluate(() => {
+        const spans = Array.from(document.querySelectorAll('span'));
+        const target = spans.find(s => s.textContent?.trim().toLowerCase() === 'escolar');
+        if (target) { target.click(); return true; }
+        return false;
+      });
+      if (!clickedEscolar) throw new Error('No se encontró el botón de Escolar');
+      await this.browser.wait(2000);
+
+      // 3. Click en Información Alumnos
+      console.log(`[InnovatAgent] Paso 2: Click en Información Alumnos...`);
+      const clickedInfo = await page.evaluate(() => {
+        const links = Array.from(document.querySelectorAll('a'));
+        const target = links.find(a => {
+          const txt = a.textContent?.trim().toLowerCase();
+          const isVisible = (a as HTMLElement).offsetParent !== null;
+          return isVisible && (txt.includes('información alumnos') || txt.includes('informacion alumnos'));
+        });
+        if (target) { target.click(); return true; }
+        return false;
+      });
+      if (!clickedInfo) throw new Error('No se encontró el submenú Información Alumnos');
+      await this.browser.wait(1500);
+
+      // 4. Click en General de alumnos
+      console.log(`[InnovatAgent] Paso 3: Click en General de alumnos...`);
+      const clickedGral = await page.evaluate(() => {
+        const links = Array.from(document.querySelectorAll('a'));
+        const target = links.find(a => {
+           const txt = a.textContent?.trim().toLowerCase();
+           return txt.includes('general de alumnos');
+        });
+        if (target) { target.click(); return true; }
+        return false;
+      });
+      if (!clickedGral) throw new Error('No se encontró el link General de alumnos');
+
+      await this.browser.wait(4000); // Dar más tiempo a Browserless para renderizar la página pesada
       return { success: true };
     } catch (e) {
-      return { success: false, error: 'Error al navegar a Información de Alumnos.' };
+      console.error(`[InnovatAgent] ❌ Fallo en navegación a General de Alumnos:`, e);
+      return { success: false, error: 'Error al navegar a Información de Alumnos. El sistema está respondiendo lento.' };
     }
   }
 

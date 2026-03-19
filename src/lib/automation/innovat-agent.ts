@@ -391,30 +391,61 @@ export class InnovatAgent {
   private async configureFiltersAndGenerate(): Promise<AutomationResult> {
     try {
       const page = this.browser.getPage();
-      await page.locator('.uk-tab a').filter({ hasText: /^ALUMNO$/i }).first().click().catch(() => {});
+      console.log(`[InnovatAgent] ===== CONFIGURACIÓN DE FILTROS ALUMNO =====`);
+      
+      // 1. Seleccionar la pestaña "ALUMNO" (por si acaso no está seleccionada por defecto)
+      await page.evaluate(() => {
+        const tabs = Array.from(document.querySelectorAll('.uk-tab a'));
+        const alumnoTab = tabs.find(t => t.textContent?.trim().toUpperCase() === 'ALUMNO');
+        if (alumnoTab) (alumnoTab as HTMLElement).click();
+      }).catch(() => {});
       await this.browser.wait(1000);
 
-      const campos = [/Matrícula/i, /Nombre corto/i, /^CURP$/i];
-      for (const patron of campos) {
-        const label = page.locator('label').filter({ hasText: patron }).first();
-        if (await label.isVisible()) {
-          const isChecked = await label.evaluate(el => {
-            const input = el.querySelector('input') || el.parentElement?.querySelector('input');
-            return input ? (input as HTMLInputElement).checked : false;
-          }).catch(() => false);
-          if (!isChecked) {
-            await label.click({ force: true });
-            await this.browser.wait(600);
+      // 2. Tildar los checkboxes "Matrícula", "Nombre corto", y "CURP"
+      console.log(`[InnovatAgent] Activando opciones de Matrícula, Nombre corto y CURP...`);
+      await page.evaluate(() => {
+        const targets = ['MATRÍCULA', 'NOMBRE CORTO', 'CURP', 'MATRICULA'];
+        const labels = Array.from(document.querySelectorAll('label'));
+
+        for (const lbl of labels) {
+          const text = lbl.textContent?.trim().toUpperCase() || '';
+          if (targets.includes(text)) {
+            const input = lbl.querySelector('input') || lbl.parentElement?.querySelector('input');
+            if (input && !(input as HTMLInputElement).checked) {
+               // En vez de label.click(), hacemos click directo al input o su label nativo
+               (input as HTMLElement).click();
+            }
           }
         }
-      }
+      }).catch((e) => console.log('Error JS checkboxes:', e));
+      await this.browser.wait(1000);
 
-      const genBtn = page.locator('button, a').filter({ hasText: /^GENERAR$/i }).first();
-      await genBtn.click({ force: true });
-      await this.browser.wait(10000);
+      // 3. Click en GENERAR
+      console.log(`[InnovatAgent] Dando clic en GENERAR reporte de alumnos...`);
+      const clickedGenerar = await page.evaluate(() => {
+        const btns = Array.from(document.querySelectorAll('button, a'));
+        const genBtn = btns.find(b => {
+          const text = b.textContent?.trim().toUpperCase() || '';
+          const isVisible = (b as HTMLElement).offsetParent !== null;
+          return isVisible && text === 'GENERAR';
+        });
+        if (genBtn) {
+          (genBtn as HTMLElement).click();
+          return true;
+        }
+        return false;
+      });
+
+      if (!clickedGenerar) {
+        throw new Error('No se encontró el botón GENERAR visible en pantalla.');
+      }
+      
+      console.log(`[InnovatAgent] Cargando listado de alumnos (esperando 10s)...`);
+      await this.browser.wait(10000); // Dar suficiente tiempo a Browserless / Innovat
       return { success: true };
     } catch (e) {
-      return { success: false, error: 'Error al configurar filtros del reporte.' };
+      console.error(`[InnovatAgent] ❌ Fallo al configurar filtros:`, e);
+      return { success: false, error: 'Error al configurar filtros del reporte. El sistema puede estar saturado.' };
     }
   }
 

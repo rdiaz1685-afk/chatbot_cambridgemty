@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { InnovatAgent } from '@/lib/automation/innovat-agent'
 import type { ChatAction, AutomationResult, AutomationParams } from '@/types/chat'
 
+export const maxDuration = 60; // Evitar el límite de 15s de Vercel Hobby
 // Caché global para guardar la matrícula entre Fases 1/2 y Fase 3
 const globalForCache = globalThis as unknown as {
   matriculaCache: Map<string, string> | undefined

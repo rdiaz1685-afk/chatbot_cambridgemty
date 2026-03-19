@@ -423,26 +423,33 @@ export class InnovatAgent {
 
       // 3. Click en GENERAR
       console.log(`[InnovatAgent] Dando clic en GENERAR reporte de alumnos...`);
-      const clickedGenerar = await page.evaluate(() => {
-        const btns = Array.from(document.querySelectorAll('button, a'));
-        const genBtn = btns.find(b => {
-          const text = b.textContent?.trim().toUpperCase() || '';
-          const isVisible = (b as HTMLElement).offsetParent !== null;
-          return isVisible && text === 'GENERAR';
-        });
-        if (genBtn) {
-          (genBtn as HTMLElement).click();
-          return true;
-        }
-        return false;
-      });
+      
+      // En campus grandes como CUMBRES, este clic provoca un postback pesado que reinicia el DOM.
+      // Usamos Promise.all para atrapar la navegación correctamente.
+      const [clickedGenerar] = await Promise.all([
+        page.evaluate(() => {
+          const btns = Array.from(document.querySelectorAll('button, a'));
+          const genBtn = btns.find(b => {
+            const text = b.textContent?.trim().toUpperCase() || '';
+            const isVisible = (b as HTMLElement).offsetParent !== null;
+            return isVisible && text === 'GENERAR';
+          });
+          if (genBtn) {
+            (genBtn as HTMLElement).click();
+            return true;
+          }
+          return false;
+        }),
+        page.waitForNavigation({ waitUntil: 'networkidle', timeout: 40000 })
+            .catch(() => console.log('[InnovatAgent] Tiemout de navigation/networkidle, continuando...'))
+      ]);
 
       if (!clickedGenerar) {
         throw new Error('No se encontró el botón GENERAR visible en pantalla.');
       }
       
-      console.log(`[InnovatAgent] Cargando listado de alumnos (esperando 12s)...`);
-      await this.browser.wait(12000); // Dar suficiente tiempo a Browserless / Innovat
+      console.log(`[InnovatAgent] Renderizando tabla post-navegación (5s gracia)...`);
+      await this.browser.wait(5000); // 5s extra para que el framework dibuje la tabla de forma segura
       return { success: true };
     } catch (e) {
       console.error(`[InnovatAgent] ❌ Fallo al configurar filtros:`, e);

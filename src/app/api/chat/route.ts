@@ -8,6 +8,8 @@ import { systemPrompts, helpMessages, campuses } from '@/lib/config'
 import { db } from '@/lib/db'
 import type { Message, ChatAction, ChatRequest, ChatResponse, AutomationParams } from '@/types/chat'
 
+export const maxDuration = 60;
+
 // ─── Session storage persistente entre hot-reloads de Next.js ───────────────
 type SessionData = {
   pendingAction?: ChatAction

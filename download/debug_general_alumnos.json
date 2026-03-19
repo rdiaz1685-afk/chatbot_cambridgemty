@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Esta es la página de **INICIO** del sistema Innovat (para el colegio \"COLEGIO CAMBRIDGE DE MONTERREY\").  \n\n### ¿Veo el botón \"GENERAR\"?  \nNo, en la captura de pantalla **no se visualiza ningún botón con la etiqueta \"GENERAR\"**.  \n\n\n### Elementos en la pantalla (descripción específica):  \n1. **Header (barra superior)**:  \n   - Logo del colegio, nombre del colegio (\"COLEGIO CAMBRIDGE DE MONTERREY\"), menú de navegación (con \"INICIO\" seleccionado), iconos de búsqueda, \"Innovat IA\", \"Auto\", y menú desplegable \"MITRAS 2025-2026\".  \n\n2. **Panel izquierdo (sidebar)**:  \n   - Sección de usuario (\"Diaz Rios prueba\") con avatar.  \n   - Menú \"Escolar\" (con ícono y menú desplegable).  \n\n3. **Contenido principal**:  \n   - **Sección \"Últimas operaciones\"**: Muestra el texto \"No hay operaciones recientes\" (sin campos de entrada ni botones).  \n   - **Sección \"Últimos reportes\"**: Muestra el enlace \"General de alumnos\" (texto cliclable, no es un campo de entrada).  \n   - **Sección \"Bandeja de entrada\"**: Con el botón \"CARGAR MAS\" (texto cliclable, no es un campo de entrada).  \n\n4. **Calendario**:  \n   - Muestra \"marzo 2026\" con días de la semana (dom. a sáb.) y fechas. El día 10 está resaltado en amarillo.  \n\n5. **Banner de versión**:  \n   - Muestra \"Versión 32.2\" con una lista de actualizaciones (texto informativo, sin elementos interactivos como checkboxes, radio buttons o campos de entrada).  \n\n\n### Elementos interactivos (checkboxes, radio buttons, campos de entrada):  \nEn la captura de pantalla **no se observan checkboxes, radio buttons ni campos de entrada** (como cajas de texto, selects, etc.). Los elementos visibles son principalmente secciones informativas, enlaces y el calendario.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773174904,
+  "id": "20260311043458b265dc17ef3d43d3",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260311043458b265dc17ef3d43d3",
+  "usage": {
+    "completion_tokens": 496,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2755,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 3251
+  }
+}

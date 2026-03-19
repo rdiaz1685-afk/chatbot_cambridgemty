@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "La captura muestra una interfaz del sistema \"Colegio Cambridge de Monterrey\" en la sección \"General de Alumnos\". No hay una tabla con datos visibles (solo una fila de ejemplo con \"RELN140207MNLyLTA4\" en el campo \"Nombre corto\" y un campo vacío para \"CURP\"). No hay un mensaje de error visible en la pantalla. Los elementos presentes incluyen:  \n\n- **Barra superior**: Logo del colegio, navegación (Inicio, General de Alumnos), filtros (Unidad, \"MITRAS\"), opciones de estado (Activos, Inactivos, Ambos).  \n- **Sección de configuración**: Pestañas (Alumno, Administrativos, etc.) con casillas de verificación para campos (Matrícula, Nombre corto, CURP, etc.) y botones para ordenar (\"Arrastra y suelta...\") y generar reporte (\"GENERAR\").  \n- **Sección de reporte**: Encabezado \"MITRAS\" con fecha \"10 marzo 2026\" y campos de entrada para \"Matrícula\", \"Nombre corto\" y \"CURP\" (con un valor de ejemplo en \"Nombre corto\" y el campo \"CURP\" vacío).  \n\nNo se observa ninguna indicación de error relacionado con la verificación de CURP en la imagen proporcionada.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773175758,
+  "id": "202603110448587221d2d57ba84ecd",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202603110448587221d2d57ba84ecd",
+  "usage": {
+    "completion_tokens": 294,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2746,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 3040
+  }
+}

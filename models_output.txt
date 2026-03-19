@@ -1,0 +1,5 @@
+opencode/big-pickle
+opencode/gpt-5-nano
+opencode/mimo-v2-flash-free
+opencode/minimax-m2.5-free
+opencode/nemotron-3-super-free

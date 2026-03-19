@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Sí, se ve una tabla con datos de alumnos.  \n\n- **Número de filas**: La tabla tiene 8 filas con datos de alumnos (excluyendo la fila de encabezado).  \n- **Columnas**: Las columnas visibles son \"Matrícula\", \"Nombre corto\" y \"CURP\".  \n- **Filtros de búsqueda**: Sí, hay filtros de búsqueda (inputs de texto) sobre las columnas \"Matrícula\", \"Nombre corto\" y \"CURP\" (uno por cada columna, ubicados justo debajo del encabezado de la tabla).",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773175738,
+  "id": "20260311044849623c2f3b91b24d5f",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260311044849623c2f3b91b24d5f",
+  "usage": {
+    "completion_tokens": 132,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2758,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 2890
+  }
+}

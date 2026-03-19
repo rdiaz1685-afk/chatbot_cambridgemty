@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Sí, veo la tabla de alumnos (sección \"General de Alumnos\").  \n\n- **Campo de texto/filtro para buscar**: No, en esta captura no hay un campo de texto o filtro visible para buscar (solo hay filtros de \"Unidad\", \"MITRAS\", y opciones de \"Activos/Inactivos/Ambo\").  \n\n- **Información de estudiantes mostrada en la tabla**: La tabla muestra campos seleccionables (con casillas de verificación) como: Matrícula, Fotografía, Nombre corto, Apellidos nombre, Nombre apellidos, Nombre, Apellido paterno, Apellido materno, CURP, Sexo, Fecha nac., Lugar nacimiento, Nacionalidad, Email, Contacto principal, Núm. hno., Edad.  \n\n- **CURP visible**: No, no hay ningún CURP visible en la tabla (la casilla de \"CURP\" está desmarcada, y la tabla no muestra datos de alumnos aún, solo las opciones de campos a mostrar).",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773174914,
+  "id": "202603110435041a4b0cb2cd944a53",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202603110435041a4b0cb2cd944a53",
+  "usage": {
+    "completion_tokens": 222,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2756,
+    "prompt_tokens_details": {
+      "cached_tokens": 11
+    },
+    "total_tokens": 2978
+  }
+}

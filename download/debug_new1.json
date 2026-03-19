@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "No, no veo el botón \"GENERAR\" en la captura.  \n\n### Elementos en la pantalla:  \n- **Barra superior**: Contiene el logo del colegio, navegación (flecha atrás, \"INICIO\"), buscador, \"Innovat IA\", \"Auto\", \"MITRAS 2025-2026\" y un icono de usuario.  \n- **Panel izquierdo**: Menú con \"Escolar\" (sección activa) y \"Información Alumnos\" (submenú).  \n- **Contenido principal**:  \n  - Sección \"Últimas operaciones\" (con texto \"No hay operaciones recientes\").  \n  - Sección \"Últimos reportes\" (con \"General de alumnos\" como elemento listado).  \n  - Sección \"Bandeja de entrada\" (con botón \"CARGAR MAS\").  \n  - Calendario de \"marzo 2026\" (con navegación de meses y días).  \n\n\n### Tipo de página:  \nEs el **dashboard** (página de inicio o panel principal) del sistema, no la página de configuración de reportes. La sección \"Últimos reportes\" muestra un enlace a \"General de alumnos\", pero la pantalla actual no es la página de configuración de reportes (donde normalmente aparecería el botón \"GENERAR\").",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773175302,
+  "id": "202603110441383b4e9b0e69724a3e",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202603110441383b4e9b0e69724a3e",
+  "usage": {
+    "completion_tokens": 293,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2750,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 3043
+  }
+}

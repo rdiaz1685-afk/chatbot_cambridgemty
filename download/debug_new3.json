@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "La captura muestra la página **\"General de Alumnos\"** del sistema del Colegio Cambridge de Monterrey.  \n\n### Elementos presentes:  \n- **Header**: Barra azul con el nombre del colegio, navegación (INICIO, GENERAL DE ALUMNOS), y opciones de usuario (Innovat IA, Auto, MITRAS 2025-2026).  \n- **Sidebar izquierdo**: Perfil de usuario (\"Diaz Rios prueba\") y menú \"Escolar\" con \"Información Alumnos\".  \n- **Contenido principal**:  \n  - Título \"General de Alumnos\" con filtros (Unidad, \"MITRAS\", \"Todos los hermanos\") y opciones de estado (Activos, Inactivos, Ambos).  \n  - Tabla con pestañas (ALUMNO, ADMINISTRATIVOS, FAMILIA, DOMICILIO, etc.) y casillas de verificación para campos (Matrícula, Nombre corto, CURP, etc.).  \n  - Sección de ordenamiento (\"Arrastra y suelta...\") con botones azules (Matrícula, Nombre corto, CURP).  \n  - Botón **\"GENERAR\"** (verde) en la esquina inferior derecha.  \n  - Opciones adicionales (Consecutivo, Logos) debajo del botón GENERAR.  \n\n\n### Mensaje de error:  \nNo hay **ningún mensaje de error visible** en la captura. El botón \"GENERAR\" está presente y visible, por lo que la descripción inicial (\"no se encontró el botón GENERAR\") no coincide con la imagen proporcionada.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773175303,
+  "id": "20260311044123112b822fb7344c20",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260311044123112b822fb7344c20",
+  "usage": {
+    "completion_tokens": 360,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2738,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 3098
+  }
+}

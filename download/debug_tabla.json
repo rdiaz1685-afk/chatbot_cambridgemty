@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "No, no hay una tabla con datos de alumnos visibles en la captura. Tampoco hay campos de filtro/búsqueda sobre las columnas (para filtrar por CURP, Matrícula, etc.). La tabla que se muestra contiene **columnas de configuración** (como \"ALUMNO\", \"ADMINISTRATIVOS\", \"FAMILIA\", etc.) con casillas de verificación para seleccionar qué datos mostrar (Matrícula, Nombre corto, CURP, Nacionalidad, etc.), pero **no hay datos de estudiantes visibles** (filas con información de alumnos). La sección inferior está en blanco, sin resultados de la consulta.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773174883,
+  "id": "202603110434366a8aab125f334836",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202603110434366a8aab125f334836",
+  "usage": {
+    "completion_tokens": 141,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2775,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 2916
+  }
+}

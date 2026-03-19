@@ -1,0 +1,5 @@
+[0m
+[90m┌[39m  Credentials [90m~\.local\share\opencode\auth.json
+[90m│[39m
+[90m└[39m  0 credentials
+

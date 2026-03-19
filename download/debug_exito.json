@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Sí, el CURP 'RELN140207MNLYLTA4' se ve en la tabla. Se muestran 1 fila. Los datos del estudiante que se ven son: matrícula \"2235\", nombre \"REYES LEAL NATALIA ALEJANDRA\" y CURP \"RELN140207MNLYLTA4\".",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773176303,
+  "id": "202603110458214224f6d7e14d4fd4",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202603110458214224f6d7e14d4fd4",
+  "usage": {
+    "completion_tokens": 82,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2768,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 2850
+  }
+}

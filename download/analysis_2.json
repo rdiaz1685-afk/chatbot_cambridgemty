@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "### 1) ¿Qué página es?  \nLa página es el **Dashboard de Inicio** del sistema escolar \"Innovat\", perteneciente al \"Colegio Cambridge de Monterrey\". Esto se evidencia por el título \"INICIO\" en la barra azul superior y el contenido de resumen (operaciones, reportes, bandeja de entrada) típico de un panel principal.\n\n\n### 2) ¿Qué campos de entrada ves?  \nNo hay campos de entrada visibles explícitamente (como `<input type=\"text\">` o `<textarea>`). Sin embargo, el campo de búsqueda en la barra superior (ícono de lupa) es un campo de entrada implícito, aunque no se muestra texto escrito en él.\n\n\n### 3) ¿Qué botones hay?  \n- **Botón de búsqueda**: Ícono de lupa en la barra superior (derecha, junto al logo \"Innovat IA\").  \n- **Botón \"Cargar más\"**: Texto \"CARGAR MAS\" en la sección \"Bandeja de entrada\" (derecha del título).  \n- **Botón de calendario**: Ícono de calendario (📅) junto al título \"marzo 2026\" (en el calendario).  \n\n\n### 4) ¿Qué selectores/desplegables hay?  \n- **Selector de año académico**: Desplegable en la esquina superior derecha con opciones como \"ANÁHUAC 2026-2027\", \"NORTE 2026-2027\", etc.  \n- **Selector de menú lateral**: Desplegable en el menú izquierdo (icono de flecha hacia abajo junto a \"Escolar\").  \n\n\n### Selectores CSS probables para cada elemento:  \n| Elemento | Selector CSS Probable | Justificación |\n|----------|----------------------|---------------|\n| **Barra superior (azul)** | `header` o `.header` | Contiene el logo, título del colegio y menús. |\n| **Título \"INICIO\"** | `.header__title` o `#inicio` | Etiqueta el panel principal. |\n| **Selector de año académico** | `.academic-year-selector` o `select[name=\"academic-year\"]` | Elemento desplegable con opciones de años. |\n| **Calendario** | `.calendar` o `#calendar` | Contenedor del calendario de marzo 2026. |\n| **Botón \"Cargar más\"** | `.load-more-btn` o `button.load-more` | Texto \"CARGAR MAS\" en la sección de bandeja de entrada. |\n| **Menú lateral (desplegable)** | `.sidebar__menu-dropdown` o `button.sidebar__toggle` | Flecha de desplegue junto a \"Escolar\". |\n| **Campo de búsqueda** | `.search-input` o `input[type=\"search\"]` | Ícono de lupa en la barra superior. |\n| **Sección \"Últimas operaciones\"** | `.recent-operations` o `div.recent-operations` | Contenedor de la caja con \"No hay operaciones recientes\". |\n| **Sección \"Bandeja de entrada\"** | `.inbox` o `div.inbox` | Contenedor con título y botón \"Cargar más\". |\n| **Versión 32.2 (banner)** | `.version-banner` o `div.version-32-2` | Caja inferior con lista de actualizaciones. |\n\n\n### Notas adicionales:  \n- El diseño sigue patrones comunes de dashboards escolares: barra superior con navegación, menú lateral, secciones de resumen y un calendario.  \n- El desplegable de año académico es interactivo (muestra opciones al hacer clic), lo que confirma su función de selector.  \n- No hay campos de entrada editables visibles, lo que sugiere que la página es de solo lectura (resumen) en esta vista.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773174814,
+  "id": "2026031104332486d123241e944e4d",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "2026031104332486d123241e944e4d",
+  "usage": {
+    "completion_tokens": 844,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2331,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 3175
+  }
+}

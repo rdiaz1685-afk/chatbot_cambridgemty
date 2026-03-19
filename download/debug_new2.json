@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Sí, en la captura se ve el botón **GENERAR** (verde) en la esquina inferior derecha de la sección de configuración.  \n\n### Elementos presentes:  \n- **Tabs/Secciones**: \"ALUMNO\", \"ADMINISTRATIVOS\", \"FAMILIA\", \"DOMICILIO\", \"FACTURACIÓN 1\", \"FACTURACIÓN 2\", \"CAMPOS ADICIONALES\", \"ADICIONALES DE CICLO\", \"USUARIO\".  \n- **Checkboxes** (para seleccionar columnas):  \n  - En la sección \"ALUMNO\": Matrícula (marcado), Fotografía, Nombre corto (marcado), Apellidos nombre.  \n  - En \"ADMINISTRATIVOS\": Nombre apellidos, Nombre, Apellido paterno, Apellido materno.  \n  - En \"CAMPOS ADICIONALES\": CURP (marcado), Sexo, Fecha nac., Lugar nacimiento.  \n  - En \"ADICIONALES DE CICLO\": Nacionalidad, Email, Contacto principal, Núm. hno.  \n  - En \"USUARIO\": Edad.  \n- **Otros elementos**: Campos de filtro (Unidad, Todos los hermanos), radio buttons (Activos, Inactivos, Ambos), botones de orden (Matrícula, Nombre corto, CURP), y checkboxes adicionales (Consecutivo, Logos).  \n\n\n### ¿Hay checkboxes para seleccionar columnas como CURP?  \nSí, el checkbox para **CURP** está presente en la sección \"CAMPOS ADICIONALES\" y está marcado (con una cruz verde).",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773175283,
+  "id": "202603110441091294174c4cdb4b21",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202603110441091294174c4cdb4b21",
+  "usage": {
+    "completion_tokens": 359,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2742,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 3101
+  }
+}

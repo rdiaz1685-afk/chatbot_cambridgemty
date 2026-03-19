@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Sí, se ve la tabla con datos de alumnos. Tiene 8 filas. No hay ningún filtro aplicado (no se muestra ningún valor en los campos de filtro ni indicadores de filtro activo). No se ve el CURP 'RELN140207MNLYLTA4' en ninguna parte. Los campos de filtro (Matrícula, Nombre corto, CURP) están vacíos, sin texto.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773176042,
+  "id": "20260311045400f80692d9f06647ff",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260311045400f80692d9f06647ff",
+  "usage": {
+    "completion_tokens": 91,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2775,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 2866
+  }
+}

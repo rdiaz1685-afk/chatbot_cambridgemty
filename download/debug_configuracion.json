@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Esta es la página **\"General de Alumnos\"** de la plataforma Innovat (del Colegio Cambridge de Monterrey).  \n\n### ¿Veo el botón \"GENERAR\"?  \nSí, el botón **\"GENERAR\"** (de color verde) está visible en la esquina inferior derecha de la pantalla.  \n\n\n### Elementos en la pantalla:  \n1. **Campos de entrada (dropdowns)**:  \n   - Un campo de entrada con la etiqueta \"Unidad\" (con un ícono de flecha hacia abajo, indicando que es un menú desplegable).  \n   - Un campo de entrada con la etiqueta \"Todos los hermanos\" (también un menú desplegable).  \n\n2. **Radio buttons**:  \n   - Tres radio buttons para filtrar el estado de los alumnos:  \n     - \"Activos\" (seleccionado, con un círculo verde).  \n     - \"Inactivos\" (no seleccionado, con un círculo rojo).  \n     - \"Ambos\" (no seleccionado, con un círculo verde y rojo).  \n\n3. **Checkboxes**:  \n   - Múltiples checkboxes para seleccionar campos de información del alumno (organizados en pestañas como \"ALUMNO\", \"ADMINISTRATIVOS\", etc.):  \n     - Ejemplos: \"Matrícula\" (seleccionado), \"Fotografía\" (no seleccionado), \"Nombre corto\" (seleccionado), \"CURP\" (seleccionado), \"Nacionalidad\" (no seleccionado), \"Edad\" (no seleccionado), \"Consecutivo\" (no seleccionado), \"Logos\" (no seleccionado), entre otros.  \n\n4. **Botones adicionales**:  \n   - Botones azules con etiquetas como \"Matrícula\", \"Nombre corto\", \"CURP\" (probablemente para reordenar o filtrar campos).  \n   - El botón \"GENERAR\" (verde) en la esquina inferior derecha.  \n\n5. **Pestañas de navegación**:  \n   - Pestañas como \"ALUMNO\", \"ADMINISTRATIVOS\", \"FAMILIA\", \"DOMICILIO\", \"FACTURACIÓN 1\", \"FACTURACIÓN 2\", \"CAMPOS ADICIONALES\", \"ADICIONALES DE CICLO\", \"USUARIO\" (para organizar los campos de información).  \n\n6. **Etiquetas y texto**:  \n   - Texto como \"Arrastra y suelta para establecer el orden:\" (indicando una funcionalidad de reordenamiento de campos).  \n   - Etiquetas de filtros como \"MITRAS\" (con un botón \"X\" para eliminar el filtro).  \n\n\nEn resumen, la pantalla es una interfaz de configuración de reportes o listados de alumnos, con opciones para seleccionar campos, filtrar por estado y generar un documento.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773174907,
+  "id": "20260311043443f9daae7bdc364ef1",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260311043443f9daae7bdc364ef1",
+  "usage": {
+    "completion_tokens": 634,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2755,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 3389
+  }
+}

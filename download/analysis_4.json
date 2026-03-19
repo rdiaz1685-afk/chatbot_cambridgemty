@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "### 1. Filtros de búsqueda  \nLos filtros de búsqueda están organizados en **tabs horizontales** (pestañas) y **checkboxes** (casillas de verificación) para seleccionar campos a mostrar o filtrar:  \n\n- **Tabs de categorías**:  \n  - `ALUMNO`, `ADMINISTRATIVOS`, `FAMILIA`, `DOMICILIO`, `FACTURACIÓN 1`, `FACTURACIÓN 2`, `CAMPOS ADICIONALES`, `ADICIONALES DE CICLO`, `USUARIO`  \n  - Selector CSS: `#tabs-container .nav-tabs .nav-item a` (o similar, dependiendo de la estructura de Bootstrap)  \n\n- **Checkboxes de campos**:  \n  - En la sección `ALUMNO`: `Matrícula` (seleccionado), `Fotografía`, `Nombre corto` (seleccionado), `Apellidos nombre`  \n  - En `ADMINISTRATIVOS`: `Nombre apellidos`, `Nombre`, `Apellido paterno`, `Apellido materno`  \n  - En `FAMILIA`: `CURP` (seleccionado), `Sexo`, `Fecha nac.`, `Lugar nacimiento`  \n  - En `USUARIO`: `Nacionalidad`, `Email`, `Contacto principal`, `Num. hno.`, `Edad`  \n  - Selector CSS: `#filter-checkboxes input[type=\"checkbox\"]` (o `#filter-section .form-check-input`)  \n\n\n### 2. Campos de entrada para buscar  \nLos campos de entrada están en la **tabla de resultados** (debajo de los filtros) y permiten buscar por:  \n\n- `Matrícula`: Campo de texto (input) en la columna `Matrícula`  \n- `Nombre corto`: Campo de texto (input) en la columna `Nombre corto`  \n- `CURP`: Campo de texto (input) en la columna `CURP` (con un botón \"x\" para limpiar)  \n\nSelector CSS para campos de entrada: `#results-table input[type=\"text\"]`  \n\n\n### 3. Botones de acción  \nLos botones de acción están ubicados en la parte superior derecha de la sección de filtros y en la tabla:  \n\n- **Botón \"GENERAR\"**: Verde, para generar el reporte con los filtros seleccionados  \n  - Selector CSS: `#generate-button` (o `.btn.btn-success`)  \n\n- **Botones de acción en la tabla**:  \n  - Icono de impresión (🖨️), exportación (📥), y otro (posiblemente \"Limpiar\" o \"Refrescar\")  \n  - Selector CSS: `#table-actions .btn` (o `#table-actions i`)  \n\n\n### 4. Estructura de la tabla  \nLa tabla tiene:  \n\n- **Encabezados**: `Matrícula`, `Nombre corto`, `CURP` (con iconos de ordenamiento: ▲/▼)  \n- **Filas de datos**: Cada fila contiene:  \n  - Matrícula (ej: `2021`, `2235`),  \n  - Nombre corto (ej: `REYNA LOZANO NATALIA`),  \n  - CURP (ej: `RELN130702MNLYZTA7`)  \n- **Campos de entrada**: En la fila de encabezado (para buscar en tiempo real)  \n- **Botón \"x\"**: En el campo `CURP` para limpiar la búsqueda  \n\nSelector CSS para la tabla: `#results-table` (o `.table`)  \nSelector CSS para encabezados: `#results-table th`  \nSelector CSS para filas de datos: `#results-table tbody tr`  \n\n\n### Selectores CSS probables (resumidos)  \n| Elemento | Selector CSS |  \n|----------|--------------|  \n| Tabs de categorías | `#tabs-container .nav-tabs .nav-item a` |  \n| Checkboxes de filtros | `#filter-section .form-check-input` |  \n| Campo de entrada (CURP) | `#results-table input[type=\"text\"]` (columna CURP) |  \n| Botón \"GENERAR\" | `#generate-button` o `.btn.btn-success` |  \n| Tabla de resultados | `#results-table` |  \n| Encabezados de tabla | `#results-table th` |  \n| Filas de datos | `#results-table tbody tr` |  \n| Botones de acción (impresión, exportación) | `#table-actions .btn` |  \n\n\nEsta estructura sigue patrones comunes de interfaces de administración (ej: Bootstrap), por lo que los selectores CSS son aproximados pero funcionales para interactuar con los elementos.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1773174806,
+  "id": "20260311043308162c8f6fc81046c6",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260311043308162c8f6fc81046c6",
+  "usage": {
+    "completion_tokens": 1026,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2430,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 3456
+  }
+}

@@ -32,17 +32,26 @@ export class BrowserAutomation {
     try {
       this.updateSession('init', 'Iniciando navegador...', 0);
 
-      this.browser = await chromium.launch({
-        headless: false, // Force false for visual debugging
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-web-security',
-          '--disable-features=IsolateOrigins,site-per-process',
-        ],
-      });
+      const isProduction = process.env.NODE_ENV === 'production';
+      const browserlessUrl = process.env.BROWSERLESS_URL;
+
+      if (isProduction && browserlessUrl) {
+        console.log('[Browser] Conectando a navegador en la nube (Browserless)...');
+        this.browser = await chromium.connectOverCDP(browserlessUrl);
+      } else {
+        console.log('[Browser] Iniciando navegador local (modo visual)...');
+        this.browser = await chromium.launch({
+          headless: false, // Force false for visual debugging locally
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process',
+          ],
+        });
+      }
 
       this.context = await this.browser.newContext({
         viewport: { width: 1920, height: 1080 },

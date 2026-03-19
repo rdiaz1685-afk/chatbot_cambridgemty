@@ -75,7 +75,7 @@ export class InnovatAgent {
         await this.browser.close();
         return {
           success: false,
-          error: `No se encontró el CURP "${curp}" en el campus ${campus}. Verifica que el CURP y el campus sean correctos.`,
+          error: `Error al buscar el CURP "${curp}" en el campus ${campus}. Detalles: ${curpResult.error}`,
         };
       }
 
@@ -161,15 +161,15 @@ export class InnovatAgent {
         console.warn(`[InnovatAgent] ⚠️ No se encontró la matrícula en caché, intentando obtenerla dinámicamente...`);
         const resultMatricula = await this.obtenerMatriculaDesdeCURP(curp);
         
-        if (!resultMatricula) {
+        if (!resultMatricula.success || !resultMatricula.matricula) {
           console.error(`[InnovatAgent] ❌ No se pudo obtener la matrícula dinámicamente desde Escolar.`);
           await this.browser.close();
           return {
             success: false,
-            error: `No se pudo obtener la matrícula del alumno (CURP no encontrado o sin datos).`,
+            error: `No se pudo obtener la matrícula: ${resultMatricula.error}`,
           };
         }
-        matricula = resultMatricula;
+        matricula = resultMatricula.matricula;
         console.log(`[InnovatAgent] ✅ Matrícula recuperada dinámicamente: ${matricula}`);
         
         // Regresar al Home para asegurar que la navegación a Interfase Bancaria funciona desde una base limpia
@@ -474,8 +474,14 @@ export class InnovatAgent {
       }
 
       // 2. Buscar la fila del alumno por CURP
+      console.log(`[InnovatAgent] Buscando CURP en la tabla: ${curpUpper} ...`);
       const row = page.locator('table tbody tr').filter({ hasText: curpUpper }).first();
-      if (await row.isVisible()) {
+      
+      const isVisible = await row.waitFor({ state: 'visible', timeout: 8000 })
+                              .then(() => true)
+                              .catch(() => false);
+
+      if (isVisible) {
         const cells = await row.locator('td').all();
         const cellTexts = await Promise.all(cells.map(c => c.innerText().catch(() => '')));
         
@@ -508,7 +514,15 @@ export class InnovatAgent {
           },
         };
       }
-      return { success: false, error: `CURP ${curpUpper} no encontrado.` };
+      
+      // DIAGNÓSTICO DEL DOM
+      const domSnapshot = await page.evaluate(() => {
+         const t = document.querySelector('table');
+         if (!t) return 'La tabla no existe en el HTML.';
+         return t.innerText.replace(/\s+/g, ' ').substring(0, 300);
+      }).catch(() => 'Error leyendo DOM');
+
+      return { success: false, error: `El CURP ${curpUpper} no aparece. Lectura de la tabla: [${domSnapshot}...]` };
     } catch (e) {
       return { success: false, error: 'Error al verificar el CURP.' };
     }
@@ -1299,32 +1313,36 @@ export class InnovatAgent {
   /**
    * Obtiene la matrícula del alumno usando el CURP (versión simplificada)
    */
-  private async obtenerMatriculaDesdeCURP(curp: string): Promise<string | null> {
+  private async obtenerMatriculaDesdeCURP(curp: string): Promise<{ success: boolean; matricula?: string; error?: string }> {
     try {
       console.log(`[InnovatAgent] Buscando matrícula para CURP: ${curp}`);
       
-      // Navegar a General de Alumnos
       const navAlumnosResult = await this.navigateToGeneralAlumnos();
       if (!navAlumnosResult.success) {
-        return null;
+        return { success: false, error: navAlumnosResult.error };
       }
 
-      // Configurar filtros y generar reporte
-      await this.configureFiltersAndGenerate();
-      
-      // Buscar y extraer matrícula
+      const configRes = await this.configureFiltersAndGenerate();
+      if (!configRes || !configRes.success) {
+         return { success: false, error: configRes ? configRes.error : 'Error configRes' };
+      }
+
       const curpResult = await this.searchAndVerifyCURP(curp);
-      if (!curpResult.success || !curpResult.data?.estudiante?.matricula) {
-        return null;
+      if (!curpResult.success) {
+        return { success: false, error: curpResult.error };
+      }
+      
+      if (!curpResult.data?.estudiante?.matricula) {
+        return { success: false, error: `CURP encontrado, pero sin matrícula asignada.` };
       }
 
       const matricula = curpResult.data.estudiante.matricula;
       console.log(`[InnovatAgent] ✅ Matrícula encontrada: ${matricula}`);
       
-      return matricula;
+      return { success: true, matricula };
     } catch (error) {
       console.error(`[InnovatAgent] Error al obtener matrícula:`, error);
-      return null;
+      return { success: false, error: String(error) };
     }
   }
 

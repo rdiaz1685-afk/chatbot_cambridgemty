@@ -565,9 +565,19 @@ export class InnovatAgent {
       }).catch(() => {});
       await this.browser.wait(400);
 
+      // Wrapper inteligente para esperar animaciones CSS o menús lentos sin timeouts fijos ciegos
+      const clickMenuWithRetry = async (searchFn: () => boolean, retries = 5) => {
+        for (let i = 0; i < retries; i++) {
+           const success = await page.evaluate(searchFn);
+           if (success) return true;
+           await this.browser.wait(400); // 400ms por intento
+        }
+        return false;
+      };
+
       // 2. Click en COBROS
       console.log(`[InnovatAgent] Paso 1: Click en Cobros...`);
-      const clickedCobros = await page.evaluate(() => {
+      const clickedCobros = await clickMenuWithRetry(() => {
         const spans = Array.from(document.querySelectorAll('span'));
         const target = spans.find(s => s.textContent?.trim() === 'Cobros');
         if (target) {
@@ -577,11 +587,10 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedCobros) throw new Error('No se encontró el botón de Cobros');
-      await this.browser.wait(600);
 
       // 3. Click en INFORMACIÓN (Específico de Cobros)
       console.log(`[InnovatAgent] Paso 2: Click en Información...`);
-      const clickedInfo = await page.evaluate(() => {
+      const clickedInfo = await clickMenuWithRetry(() => {
         // Buscamos el link de Información que esté cerca o después de Cobros
         const links = Array.from(document.querySelectorAll('a'));
         const target = links.find(a => {
@@ -596,11 +605,10 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedInfo) throw new Error('No se encontró el submenú Información');
-      await this.browser.wait(400);
 
       // 4. Click en ESTADO DE CUENTA
       console.log(`[InnovatAgent] Paso 3: Click en Estado de cuenta...`);
-      const clickedEdc = await page.evaluate(() => {
+      const clickedEdc = await clickMenuWithRetry(() => {
         const links = Array.from(document.querySelectorAll('a'));
         const target = links.find(a => a.textContent?.trim().toLowerCase() === 'estado de cuenta');
         if (target) {
@@ -611,7 +619,7 @@ export class InnovatAgent {
       });
       if (!clickedEdc) throw new Error('No se encontró el link de Estado de Cuenta');
       
-      await this.browser.wait(400);
+      await this.browser.wait(1000); // 1 sec of graceful waiting post-click
       console.log(`[InnovatAgent] ✅ Llegamos a la página de Estado de Cuenta`);
       return { success: true };
 
@@ -832,9 +840,19 @@ export class InnovatAgent {
       }).catch(() => {});
       await this.browser.wait(400);
 
+      // Wrapper inteligente para esperar animaciones CSS o menús lentos sin timeouts fijos ciegos
+      const clickMenuWithRetry = async (searchFn: () => boolean, retries = 5) => {
+        for (let i = 0; i < retries; i++) {
+           const success = await page.evaluate(searchFn);
+           if (success) return true;
+           await this.browser.wait(400); // 400ms por intento
+        }
+        return false;
+      };
+
       // 2. Click en INTERFASE BANCARIA
       console.log(`[InnovatAgent] Paso 1: Click en Interfase Bancaria...`);
-      const clickedInterfase = await page.evaluate(() => {
+      const clickedInterfase = await clickMenuWithRetry(() => {
         const spans = Array.from(document.querySelectorAll('span'));
         const target = spans.find(s => {
           const text = s.textContent?.trim().toLowerCase();
@@ -847,11 +865,10 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedInterfase) throw new Error('No se encontró el menú Interfase Bancaria');
-      await this.browser.wait(600);
 
       // 3. Click en OPERACIÓN
       console.log(`[InnovatAgent] Paso 2: Click en Operación...`);
-      const clickedOperacion = await page.evaluate(() => {
+      const clickedOperacion = await clickMenuWithRetry(() => {
         const links = Array.from(document.querySelectorAll('a'));
         const target = links.find(a => {
           const txt = a.textContent?.trim().toLowerCase();
@@ -865,11 +882,10 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedOperacion) throw new Error('No se encontró el submenú Operación');
-      await this.browser.wait(600);
 
       // 4. Click en IMPRESIÓN DE FICHAS DE DEPÓSITO POR ALUMNO
       console.log(`[InnovatAgent] Paso 3: Click en Impresión de Fichas...`);
-      const clickedFichas = await page.evaluate(() => {
+      const clickedFichas = await clickMenuWithRetry(() => {
         const links = Array.from(document.querySelectorAll('a'));
         const target = links.find(a => {
           const txt = a.textContent?.trim().toLowerCase();
@@ -888,7 +904,7 @@ export class InnovatAgent {
       });
       if (!clickedFichas) throw new Error('No se encontró Impresión de Fichas de Depósito por Alumno');
       
-      await this.browser.wait(400);
+      await this.browser.wait(1000); // 1 sec of graceful waiting post-click
       console.log(`[InnovatAgent] ✅ Llegamos al módulo de Fichas de Depósito`);
       return { success: true };
 

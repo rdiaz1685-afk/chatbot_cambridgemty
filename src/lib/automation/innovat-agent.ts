@@ -401,21 +401,30 @@ export class InnovatAgent {
       }).catch(() => {});
       await this.browser.wait(1000);
 
-      // 2. Tildar los checkboxes "Matrícula", "Nombre corto", y "CURP"
-      console.log(`[InnovatAgent] Activando opciones de Matrícula, Nombre corto y CURP...`);
+      // 2. Tildar Matrícula, Nombre corto y CURP, y DE-TILDAR todo lo demás para que la tabla sea ligera!
+      console.log(`[InnovatAgent] Activando SÓLO Matrícula, Nombre corto y CURP. Desactivando el resto...`);
       await page.evaluate(() => {
         const targets = ['MATRÍCULA', 'NOMBRE CORTO', 'CURP', 'MATRICULA'];
+        
+        // Omitimos desmarcar filtros de sistema que el usuario o el default usen, 
+        // pero quitamos todos los datos extra (EDAD, SEXO, FECHA NAC, DIRECCION, etc.)
+        const keepWords = ['ACTIVO', 'BAJA', 'TODO', 'INCLUIR'];
+
         const labels = Array.from(document.querySelectorAll('label'));
 
         for (const lbl of labels) {
           const text = lbl.textContent?.trim().toUpperCase() || '';
-          if (targets.includes(text)) {
-            const input = lbl.querySelector('input') || lbl.parentElement?.querySelector('input');
-            if (input && !(input as HTMLInputElement).checked) {
-               // Es sumamente importante hacer click en el LABEL, no en el input
-               // ya que frameworks (iCheck/UIKit) esconden el input y dependen del click del label
-               lbl.click();
-            }
+          const input = (lbl.querySelector('input') || lbl.parentElement?.querySelector('input')) as HTMLInputElement;
+          
+          if (!input || input.type !== 'checkbox') continue;
+
+          const isTarget = targets.includes(text);
+          const isSystemFilter = keepWords.some(w => text.includes(w)) || text.length === 0;
+
+          if (isTarget && !input.checked) {
+             lbl.click(); // Lo necesitamos activo
+          } else if (!isTarget && !isSystemFilter && input.checked) {
+             lbl.click(); // Estaba activo y no lo necesitamos, lo apagamos para no saturar memoria
           }
         }
       }).catch((e) => console.log('Error JS checkboxes:', e));

@@ -462,7 +462,7 @@ export class InnovatAgent {
 
       console.log(`[InnovatAgent] Analizando encabezados de tabla...`);
       for (let i = 0; i < headers.length; i++) {
-        const text = (await headers[i].innerText()).toUpperCase().trim();
+        const text = (await headers[i].innerText().catch(() => '')).toUpperCase().trim();
         if (text.includes('MATR')) {
           matriculaIdx = i;
           console.log(`[InnovatAgent] -> Columna Matrícula hallada en índice ${i}`);
@@ -524,7 +524,8 @@ export class InnovatAgent {
 
       return { success: false, error: `El CURP ${curpUpper} no aparece. Lectura de la tabla: [${domSnapshot}...]` };
     } catch (e) {
-      return { success: false, error: 'Error al verificar el CURP.' };
+      console.error(`[InnovatAgent] ❌ Excepción en searchAndVerifyCURP:`, e);
+      return { success: false, error: `Excepción interna al verificar CURP: ${e instanceof Error ? e.message : String(e)}` };
     }
   }
 

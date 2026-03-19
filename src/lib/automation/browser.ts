@@ -36,9 +36,9 @@ export class BrowserAutomation {
       const browserlessUrl = process.env.BROWSERLESS_URL;
 
       if (isProduction && browserlessUrl) {
-        console.log('[Browser] Conectando a navegador en la nube (Browserless)...');
-        // Usamos connect en lugar de connectOverCDP para que sea 100% compatible con Playwright
-        this.browser = await chromium.connect(browserlessUrl);
+        console.log('[Browser] Conectando a navegador en la nube (Browserless V2)...');
+        // Browserless v2 usa CDP nativo, debemos usar connectOverCDP
+        this.browser = await chromium.connectOverCDP(browserlessUrl);
       } else {
         console.log('[Browser] Iniciando navegador local (modo visual)...');
         this.browser = await chromium.launch({

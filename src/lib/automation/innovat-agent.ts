@@ -392,6 +392,20 @@ export class InnovatAgent {
     try {
       const page = this.browser.getPage();
       console.log(`[InnovatAgent] ===== CONFIGURACIÓN DE FILTROS ALUMNO =====`);
+
+      // Usar Playwright para garantizar que el DOM ya renderizó los controles del reporte
+      try {
+         await page.waitForLoadState('domcontentloaded');
+         await page.waitForFunction(() => {
+             const btns = Array.from(document.querySelectorAll('button, a'));
+             return btns.some(b => {
+                 const text = b.textContent?.trim().toUpperCase() || '';
+                 return (b as HTMLElement).offsetParent !== null && text === 'GENERAR';
+             });
+         }, { timeout: 15000 });
+      } catch (e) {
+         console.warn('[InnovatAgent] Timeout esperando controles dinámicamente, intentando de todos modos...');
+      }
       
       // 1. Seleccionar la pestaña "ALUMNO" (por si acaso no está seleccionada por defecto)
       await page.evaluate(() => {
@@ -399,7 +413,7 @@ export class InnovatAgent {
         const alumnoTab = tabs.find(t => t.textContent?.trim().toUpperCase() === 'ALUMNO');
         if (alumnoTab) (alumnoTab as HTMLElement).click();
       }).catch(() => {});
-      await this.browser.wait(400);
+      await this.browser.wait(600);
 
       // 2. Tildar Matrícula, Nombre corto y CURP, y DE-TILDAR todo lo demás para que la tabla sea ligera!
       console.log(`[InnovatAgent] Activando SÓLO Matrícula, Nombre corto y CURP. Desactivando el resto...`);
@@ -433,7 +447,6 @@ export class InnovatAgent {
       // 3. Click en GENERAR
       console.log(`[InnovatAgent] Dando clic en GENERAR reporte de alumnos...`);
       
-      // En campus grandes como CUMBRES, este clic provoca un postback pesado que reinicia el DOM.
       const clickedGenerar = await page.evaluate(() => {
         const btns = Array.from(document.querySelectorAll('button, a'));
         const genBtn = btns.find(b => {
@@ -453,7 +466,7 @@ export class InnovatAgent {
       }
       
       console.log(`[InnovatAgent] Cargando tabla ligera (esperando 8s)...`);
-      await this.browser.wait(2500); // Con los checkboxes desactivados, 8s es de sobra y previene el Vercel Timeout
+      await this.browser.wait(8000); // Con los checkboxes desactivados, 8s es de sobra y previene el Vercel Timeout
       return { success: true };
     } catch (e) {
       console.error(`[InnovatAgent] ❌ Fallo al configurar filtros:`, e);

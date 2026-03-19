@@ -174,7 +174,7 @@ export class InnovatAgent {
         
         // Regresar al Home para asegurar que la navegación a Interfase Bancaria funciona desde una base limpia
         await this.browser.getPage().goto(config.innovat.url + 'Principal.aspx');
-        await this.browser.wait(2000);
+        await this.browser.wait(600);
       } else {
         console.log(`[InnovatAgent] ✅ Matrícula recuperada (evitando re-escanear alumnos): ${matricula}`);
       }
@@ -211,7 +211,7 @@ export class InnovatAgent {
             }
         }
       });
-      await this.browser.wait(1000);
+      await this.browser.wait(400);
 
       // PASO 6: Generar y descargar la ficha
       console.log(`[InnovatAgent] --- Generando ficha de pago ---`);
@@ -239,19 +239,19 @@ export class InnovatAgent {
       const page = this.browser.getPage();
       console.log(`[InnovatAgent] Navegando a: ${config.innovat.url}`);
       await this.browser.navigateTo(config.innovat.url);
-      await this.browser.wait(4000);
+      await this.browser.wait(400);
 
       await page.evaluate(() => {
         const btns = Array.from(document.querySelectorAll('.uk-modal-close-default, .close, [data-uk-close]')) as HTMLElement[];
         btns.forEach(b => b.click());
       });
-      await this.browser.wait(500);
+      await this.browser.wait(200);
 
       const escuelaField = page.locator('#NombreEscuela, input[name="NombreEscuela"]');
       if (await escuelaField.count() > 0) {
         console.log(`[InnovatAgent] Seleccionando escuela: ${config.innovat.school}`);
         await escuelaField.fill(config.innovat.school);
-        await this.browser.wait(1000);
+        await this.browser.wait(400);
         await page.keyboard.press('Enter'); // Por si es autocompletado
       }
 
@@ -259,7 +259,7 @@ export class InnovatAgent {
       await page.locator('#Contrasena, input[name="Contrasena"]').fill(config.innovat.credentials.password);
       await page.locator('button:has-text("Entrar"), button[type="submit"]').click();
 
-      await this.browser.wait(6000);
+      await this.browser.wait(400);
       const currentUrl = page.url().toLowerCase();
       console.log(`[InnovatAgent] URL post-login: ${currentUrl}`);
 
@@ -287,7 +287,7 @@ export class InnovatAgent {
         const xList = Array.from(document.querySelectorAll('span, a')).filter(el => el.textContent?.trim() === 'X') as HTMLElement[];
         xList.forEach(x => x.click());
       });
-      await this.browser.wait(1000);
+      await this.browser.wait(400);
 
       // Buscar el trigger del campus actual en la navbar
       const trigger = page.locator('.uk-navbar-nav, .header').locator('a, span').filter({ hasText: /NORTE|CUMBRES|MITRAS|ANAHUAC|DOMINIO/i }).first();
@@ -295,7 +295,7 @@ export class InnovatAgent {
       if (await trigger.isVisible()) {
         console.log(`[InnovatAgent] Trigger de campus encontrado, abriendo dropdown...`);
         await trigger.click({ force: true });
-        await this.browser.wait(2000);
+        await this.browser.wait(600);
 
         const clicked = await page.evaluate(({ campusN, cicloT }: { campusN: string; cicloT: string }) => {
           const opts = Array.from(document.querySelectorAll('.uk-dropdown a, .uk-nav a, .uk-dropdown li a')) as HTMLElement[];
@@ -319,7 +319,7 @@ export class InnovatAgent {
         if (clicked) {
           console.log(`[InnovatAgent] ✅ Campus seleccionado exitosamente`);
         }
-        await this.browser.wait(5000);
+        await this.browser.wait(400);
       }
 
       return { success: true };
@@ -339,7 +339,7 @@ export class InnovatAgent {
         const activeMenus = document.querySelectorAll('li.act_section');
         activeMenus.forEach(m => (m as HTMLElement).click());
       }).catch(() => {});
-      await this.browser.wait(1500);
+      await this.browser.wait(400);
 
       // 2. Click en Escolar
       console.log(`[InnovatAgent] Paso 1: Click en Escolar...`);
@@ -350,7 +350,7 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedEscolar) throw new Error('No se encontró el botón de Escolar');
-      await this.browser.wait(2000);
+      await this.browser.wait(600);
 
       // 3. Click en Información Alumnos
       console.log(`[InnovatAgent] Paso 2: Click en Información Alumnos...`);
@@ -365,7 +365,7 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedInfo) throw new Error('No se encontró el submenú Información Alumnos');
-      await this.browser.wait(1500);
+      await this.browser.wait(400);
 
       // 4. Click en General de alumnos
       console.log(`[InnovatAgent] Paso 3: Click en General de alumnos...`);
@@ -380,7 +380,7 @@ export class InnovatAgent {
       });
       if (!clickedGral) throw new Error('No se encontró el link General de alumnos');
 
-      await this.browser.wait(4000); // Dar más tiempo a Browserless para renderizar la página pesada
+      await this.browser.wait(400); // Dar más tiempo a Browserless para renderizar la página pesada
       return { success: true };
     } catch (e) {
       console.error(`[InnovatAgent] ❌ Fallo en navegación a General de Alumnos:`, e);
@@ -399,7 +399,7 @@ export class InnovatAgent {
         const alumnoTab = tabs.find(t => t.textContent?.trim().toUpperCase() === 'ALUMNO');
         if (alumnoTab) (alumnoTab as HTMLElement).click();
       }).catch(() => {});
-      await this.browser.wait(1000);
+      await this.browser.wait(400);
 
       // 2. Tildar Matrícula, Nombre corto y CURP, y DE-TILDAR todo lo demás para que la tabla sea ligera!
       console.log(`[InnovatAgent] Activando SÓLO Matrícula, Nombre corto y CURP. Desactivando el resto...`);
@@ -428,7 +428,7 @@ export class InnovatAgent {
           }
         }
       }).catch((e) => console.log('Error JS checkboxes:', e));
-      await this.browser.wait(1500);
+      await this.browser.wait(400);
 
       // 3. Click en GENERAR
       console.log(`[InnovatAgent] Dando clic en GENERAR reporte de alumnos...`);
@@ -453,7 +453,7 @@ export class InnovatAgent {
       }
       
       console.log(`[InnovatAgent] Cargando tabla ligera (esperando 8s)...`);
-      await this.browser.wait(8000); // Con los checkboxes desactivados, 8s es de sobra y previene el Vercel Timeout
+      await this.browser.wait(2500); // Con los checkboxes desactivados, 8s es de sobra y previene el Vercel Timeout
       return { success: true };
     } catch (e) {
       console.error(`[InnovatAgent] ❌ Fallo al configurar filtros:`, e);
@@ -550,7 +550,7 @@ export class InnovatAgent {
         const activeMenus = document.querySelectorAll('li.act_section');
         activeMenus.forEach(m => (m as HTMLElement).click());
       }).catch(() => {});
-      await this.browser.wait(1000);
+      await this.browser.wait(400);
 
       // 2. Click en COBROS
       console.log(`[InnovatAgent] Paso 1: Click en Cobros...`);
@@ -564,7 +564,7 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedCobros) throw new Error('No se encontró el botón de Cobros');
-      await this.browser.wait(2000);
+      await this.browser.wait(600);
 
       // 3. Click en INFORMACIÓN (Específico de Cobros)
       console.log(`[InnovatAgent] Paso 2: Click en Información...`);
@@ -583,7 +583,7 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedInfo) throw new Error('No se encontró el submenú Información');
-      await this.browser.wait(1500);
+      await this.browser.wait(400);
 
       // 4. Click en ESTADO DE CUENTA
       console.log(`[InnovatAgent] Paso 3: Click en Estado de cuenta...`);
@@ -598,7 +598,7 @@ export class InnovatAgent {
       });
       if (!clickedEdc) throw new Error('No se encontró el link de Estado de Cuenta');
       
-      await this.browser.wait(5000);
+      await this.browser.wait(400);
       console.log(`[InnovatAgent] ✅ Llegamos a la página de Estado de Cuenta`);
       return { success: true };
 
@@ -619,7 +619,7 @@ export class InnovatAgent {
       console.log(`[InnovatAgent] Abriendo panel de búsqueda superior...`);
       const searchPanelBtn = page.locator('.header_main_search_btn.search_btn_filtros, .uk-navbar-item:has-text("Selecciona un alumno")').first();
       await searchPanelBtn.click({ force: true });
-      await this.browser.wait(2000);
+      await this.browser.wait(600);
 
       // 2. Llenar el campo de búsqueda (Ahora que el panel debería estar abierto)
       const input = page.locator('input[placeholder*="alumno o matrícula"], input[placeholder*="matrícula"]').first();
@@ -628,7 +628,7 @@ export class InnovatAgent {
       if (!await input.isVisible()) {
         console.log(`[InnovatAgent] El input no es visible, intentando clic forzado en el área...`);
         await page.locator('.uk-autocomplete input').first().click({ force: true }).catch(() => {});
-        await this.browser.wait(1000);
+        await this.browser.wait(400);
       }
 
       if (await input.isVisible()) {
@@ -664,19 +664,19 @@ export class InnovatAgent {
           }).catch((err) => console.log(`Error en evaluate click: ${err}`));
 
           clickedSuggestion = true;
-          await this.browser.wait(1500); // Darle tiempo al AJAX para procesar al alumno
+          await this.browser.wait(400); // Darle tiempo al AJAX para procesar al alumno
         }
 
         if (!clickedSuggestion) {
           console.warn(`[InnovatAgent] ⚠️ Sugerencia NO visible, fallback a teclear el ID y presionar Enter...`);
           await page.keyboard.press('Enter');
-          await this.browser.wait(1500); 
+          await this.browser.wait(400); 
         }
       }
 
       // 4. Click en GENERAR (Estrategia agresiva y específica)
       console.log(`[InnovatAgent] Generando reporte (paso final)...`);
-      await this.browser.wait(500); // Pequeña pausa para que el botón se habilite
+      await this.browser.wait(200); // Pequeña pausa para que el botón se habilite
       
       const clickSuccess = await page.evaluate(() => {
         // Buscamos todos los botones verdes o primarios
@@ -817,7 +817,7 @@ export class InnovatAgent {
         const activeMenus = document.querySelectorAll('li.act_section');
         activeMenus.forEach(m => (m as HTMLElement).click());
       }).catch(() => {});
-      await this.browser.wait(1000);
+      await this.browser.wait(400);
 
       // 2. Click en INTERFASE BANCARIA
       console.log(`[InnovatAgent] Paso 1: Click en Interfase Bancaria...`);
@@ -834,7 +834,7 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedInterfase) throw new Error('No se encontró el menú Interfase Bancaria');
-      await this.browser.wait(2000);
+      await this.browser.wait(600);
 
       // 3. Click en OPERACIÓN
       console.log(`[InnovatAgent] Paso 2: Click en Operación...`);
@@ -852,7 +852,7 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedOperacion) throw new Error('No se encontró el submenú Operación');
-      await this.browser.wait(2000);
+      await this.browser.wait(600);
 
       // 4. Click en IMPRESIÓN DE FICHAS DE DEPÓSITO POR ALUMNO
       console.log(`[InnovatAgent] Paso 3: Click en Impresión de Fichas...`);
@@ -875,7 +875,7 @@ export class InnovatAgent {
       });
       if (!clickedFichas) throw new Error('No se encontró Impresión de Fichas de Depósito por Alumno');
       
-      await this.browser.wait(4000);
+      await this.browser.wait(400);
       console.log(`[InnovatAgent] ✅ Llegamos al módulo de Fichas de Depósito`);
       return { success: true };
 
@@ -1082,7 +1082,7 @@ export class InnovatAgent {
       }
 
       console.log(`[InnovatAgent] Esperando 4 segundos a que Innovat responda Ajax...`);
-      await this.browser.wait(4000); 
+      await this.browser.wait(400); 
 
       console.log(`[InnovatAgent] Forzando clic exacto en el alumno correcto del dropdown de Select2...`);
       // VALLADARES (16580) aparece antes que ZARATE (6580) porque Select2 ordena por apellido (V antes que Z).
@@ -1101,7 +1101,7 @@ export class InnovatAgent {
           }).catch(() => {});
           await studentResult.click({ force: true }).catch(() => {});
           clickedStudent = true;
-          await this.browser.wait(1000);
+          await this.browser.wait(400);
       }
 
       if (!clickedStudent) {
@@ -1109,7 +1109,7 @@ export class InnovatAgent {
           await page.keyboard.press('Enter');
       }
 
-      await this.browser.wait(2500);
+      await this.browser.wait(600);
 
       // PASO 2: Seleccionar formato de ficha (mes correspondiente)
       console.log(`[InnovatAgent] Paso 2: Seleccionando formato de ficha (${conceptoId})...`);
@@ -1173,7 +1173,7 @@ export class InnovatAgent {
 
       if (clickLogradoFormato) {
           console.log(`[InnovatAgent] Caja de formato clickeada. Esperando UI...`);
-          await this.browser.wait(1500); 
+          await this.browser.wait(400); 
 
           console.log(`[InnovatAgent] Buscando literalmente la opción correcta en la lista desplegable...`);
           
@@ -1272,11 +1272,11 @@ export class InnovatAgent {
           }
 
           // Esperar que Select2 asimile la selección
-          await this.browser.wait(1000);
+          await this.browser.wait(400);
       } else {
           console.warn(`[InnovatAgent] ⚠️ No se pudo clickear la caja de formato por JS. Aplicando tecla Tab de respaldo...`);
           await page.keyboard.press('Tab');
-          await this.browser.wait(1000);
+          await this.browser.wait(400);
           await page.keyboard.type(mes, { delay: 150 });
           await this.browser.wait(3500);
           console.log(`[InnovatAgent] Confirmando con Enter...`);
@@ -1284,7 +1284,7 @@ export class InnovatAgent {
       }
 
       console.log(`[InnovatAgent] Confirmando asimilación del mes...`);
-      await this.browser.wait(1500);
+      await this.browser.wait(400);
 
       // PASO 4: Activar checkbox "Tomar en cuenta para recargos"
       console.log(`[InnovatAgent] Paso 4: Activando recargos...`);
@@ -1311,7 +1311,7 @@ export class InnovatAgent {
         console.log(`[InnovatAgent] ⚠️ No se encontró checkbox de recargos, continuando...`);
       }
 
-      await this.browser.wait(1000);
+      await this.browser.wait(400);
 
       console.log(`[InnovatAgent] ✅ Configuración de ficha completada`);
       return { success: true };
@@ -1376,7 +1376,7 @@ export class InnovatAgent {
       const page = this.browser.getPage();
       console.log(`[InnovatAgent] --- Generando ficha de pago ---`);
 
-      await this.browser.wait(2000);
+      await this.browser.wait(600);
 
       // Usar enrutamiento (Routing) a nivel contexto para secuestrar la petición de la Ficha
       // Esto nos permite robar los verdaderos bytes Binarios del PDF directo del Servidor HTTP
@@ -1459,7 +1459,7 @@ export class InnovatAgent {
       let finalDownload: any = null;
       
       for (let i = 0; i < 40; i++) { // Esperar máximo 20 segundos
-         await this.browser.wait(500);
+         await this.browser.wait(200);
          if (pdfIntercepted) break;
       }
       

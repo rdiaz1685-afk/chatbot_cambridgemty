@@ -412,13 +412,14 @@ export class InnovatAgent {
           if (targets.includes(text)) {
             const input = lbl.querySelector('input') || lbl.parentElement?.querySelector('input');
             if (input && !(input as HTMLInputElement).checked) {
-               // En vez de label.click(), hacemos click directo al input o su label nativo
-               (input as HTMLElement).click();
+               // Es sumamente importante hacer click en el LABEL, no en el input
+               // ya que frameworks (iCheck/UIKit) esconden el input y dependen del click del label
+               lbl.click();
             }
           }
         }
       }).catch((e) => console.log('Error JS checkboxes:', e));
-      await this.browser.wait(1000);
+      await this.browser.wait(1500);
 
       // 3. Click en GENERAR
       console.log(`[InnovatAgent] Dando clic en GENERAR reporte de alumnos...`);
@@ -440,8 +441,8 @@ export class InnovatAgent {
         throw new Error('No se encontró el botón GENERAR visible en pantalla.');
       }
       
-      console.log(`[InnovatAgent] Cargando listado de alumnos (esperando 10s)...`);
-      await this.browser.wait(10000); // Dar suficiente tiempo a Browserless / Innovat
+      console.log(`[InnovatAgent] Cargando listado de alumnos (esperando 12s)...`);
+      await this.browser.wait(12000); // Dar suficiente tiempo a Browserless / Innovat
       return { success: true };
     } catch (e) {
       console.error(`[InnovatAgent] ❌ Fallo al configurar filtros:`, e);

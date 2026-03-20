@@ -184,8 +184,11 @@ export class InnovatAgent {
         if (urlPathSegments.length > 0 && urlPathSegments[urlPathSegments.length - 1].toLowerCase().includes('.aspx')) {
             urlPathSegments.pop();
         }
-        // URL real de Innovat: https://innovat1.mx/Gaia/32.3.1/#/Inicio
-        const safeInicioUrl = `${urlObj.origin}/${urlPathSegments.join('/')}/#/Inicio`;
+        // Usar URL actual del browser que ya tiene la versión correcta (ej: /Gaia/32.3.1/)
+        const currentUrl2 = page.url();
+        const hashIdx = currentUrl2.indexOf('#');
+        const safeBaseUrl = hashIdx !== -1 ? currentUrl2.substring(0, hashIdx) : `${urlObj.origin}/${urlPathSegments.join('/')}/`;
+        const safeInicioUrl = `${safeBaseUrl}#/Inicio`;
         console.log(`[InnovatAgent] Forzando sesión limpia: ${safeInicioUrl}`);
         await page.goto(safeInicioUrl).catch(() => {});
         await this.browser.wait(1500);
@@ -860,12 +863,23 @@ export class InnovatAgent {
       const page = this.browser.getPage();
       console.log(`[InnovatAgent] ===== NAVEGACIÓN A INTERFASE BANCARIA =====`);
       
-      // Navegar al Inicio para asegurar estado limpio del menú
-      // URL real de Innovat post-login: https://innovat1.mx/Gaia/32.3.1/#/Inicio
-      console.log(`[InnovatAgent] Navegando a #/Inicio para estado limpio...`);
-      const baseUrl = config.innovat.url.replace(/\/login$/i, '').replace(/\/Login$/i, '');
-      await page.goto(`${baseUrl}/#/Inicio`).catch(() => {});
+      // Tomar la URL base de la página actual (ya tiene la versión correcta ej: /Gaia/32.3.1/)
+      // NO usar config.innovat.url porque no tiene el número de versión
+      const currentPageUrl = page.url();
+      const hashIndex = currentPageUrl.indexOf('#');
+      const baseUrl = hashIndex !== -1 
+        ? currentPageUrl.substring(0, hashIndex)  // Quitar todo desde el #
+        : currentPageUrl.replace(/\/[^\/]*$/, '/'); // Quitar último segmento
+      
+      console.log(`[InnovatAgent] Navegando a #/Inicio para estado limpio. Base: ${baseUrl}`);
+      await page.goto(`${baseUrl}#/Inicio`).catch(() => {});
       await this.browser.wait(3000);
+      
+      // Verificar que no regresó al login
+      const urlDespuesDeNavegar = page.url().toLowerCase();
+      if (urlDespuesDeNavegar.includes('login')) {
+        throw new Error('La sesión expiró al navegar a #/Inicio — Innovat regresó al login');
+      }
 
       // Wrapper inteligente para esperar animaciones CSS o menús lentos sin timeouts fijos ciegos
       const clickMenuWithRetry = async (searchFn: () => boolean, retries = 10) => {

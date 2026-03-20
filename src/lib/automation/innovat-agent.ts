@@ -1212,20 +1212,31 @@ export class InnovatAgent {
               return isVisible && text.includes('formato');
           });
 
-          // Buscar el select container más cercano
-          for (const el of elementosTexto) {
-              const parentDiv = el.parentElement;
-              if (parentDiv) {
-                  let container: Element | null = parentDiv.querySelector('.select2-container');
-                  if (!container) {
-                      container = parentDiv.parentElement?.querySelector('.select2-container') || null;
-                  }
-                  if (!container && el.nextElementSibling) {
-                      container = el.nextElementSibling.classList.contains('select2-container')
-                          ? el.nextElementSibling
-                          : (el.nextElementSibling.querySelector('.select2-container') || null);
+          // Estrategia super inteligente: Buscar <select> original y descartar los de "Nombre/Apellido"
+          const todosLosSelects = Array.from(document.querySelectorAll('select'));
+          for (const s of todosLosSelects) {
+              const optionsTexto = Array.from(s.options).map(o => o.text.toLowerCase());
+              // Si es un combo de búsqueda (tiene 'apellido' o 'nombre') lo saltamos
+              const esCriterio = optionsTexto.some(t => t.includes('apellido') || t.includes('matrícula') || t.includes('matricula'));
+              // Si tiene miles de opciones, probable es alumno
+              const esAlumno = optionsTexto.length > 50;
+
+              if (!esCriterio && !esAlumno) {
+                  // Buscar su contenedor select2 asociado
+                  let container: Element | null = null;
+                  if (s.nextElementSibling && s.nextElementSibling.classList.contains('select2-container')) {
+                      container = s.nextElementSibling;
+                  } else {
+                      // buscar id en data-select2-id o por select2-
+                      container = document.querySelector(`.select2-container[id*='${s.id}'], .select2-container[data-select2-id]`); 
                   }
                   
+                  // intentar DOM traversal común de Select2 v3
+                  if (!container) {
+                      const possibleContainer = s.parentElement?.querySelector('.select2-container');
+                      if (possibleContainer) container = possibleContainer;
+                  }
+
                   if (container && (container as HTMLElement).offsetParent !== null) {
                       const clickObj = container.querySelector('.select2-choice') || container.querySelector('.select2-selection');
                       if (clickObj) {
@@ -1236,18 +1247,13 @@ export class InnovatAgent {
               }
           }
 
-          // Respaldo visual de posición (el segundo select2 visible)
+          // Respaldo total: El ÚLTIMO select2 visible suele ser el de Formato
           const selectsVisibles = Array.from(document.querySelectorAll('.select2-container')).filter(c => (c as HTMLElement).offsetParent !== null);
-          
-          // Habitualmente: 0 = Alumno, 1 = Formato
           if (selectsVisibles.length >= 2) {
-              const clickObj = selectsVisibles[1].querySelector('.select2-choice') || selectsVisibles[1].querySelector('.select2-selection');
-              if (clickObj) {
-                  (clickObj as HTMLElement).click();
-                  return true;
-              }
-          } else if (selectsVisibles.length === 1) {
-              const clickObj = selectsVisibles[0].querySelector('.select2-choice') || selectsVisibles[0].querySelector('.select2-selection');
+              // Generalmente Alumno = 0, Criterio = 1, Formato = 2. 
+              // En cualquier caso, el Formato casi siempre es el último de esta pantalla.
+              const elUltimo = selectsVisibles[selectsVisibles.length - 1];
+              const clickObj = elUltimo.querySelector('.select2-choice') || elUltimo.querySelector('.select2-selection');
               if (clickObj) {
                   (clickObj as HTMLElement).click();
                   return true;

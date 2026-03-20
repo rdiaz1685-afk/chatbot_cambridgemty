@@ -293,7 +293,13 @@ export class InnovatAgent {
       const trigger = page.locator('.uk-navbar-nav, .header').locator('a, span').filter({ hasText: /NORTE|CUMBRES|MITRAS|ANAHUAC|DOMINIO/i }).first();
       
       if (await trigger.isVisible()) {
-        console.log(`[InnovatAgent] Trigger de campus encontrado, abriendo dropdown...`);
+        const triggerText = (await trigger.innerText()).toUpperCase();
+        if (triggerText.includes(campusName.toUpperCase()) && triggerText.includes(cicloTarget)) {
+           console.log(`[InnovatAgent] El campus ${campusName} ${cicloTarget} ya está activo. Omitiendo recarga insegura.`);
+           return { success: true };
+        }
+
+        console.log(`[InnovatAgent] Campus activo es (${triggerText}), cambiando a ${campusName}. Abriendo dropdown...`);
         await trigger.click({ force: true });
         await this.browser.wait(600);
 
@@ -317,8 +323,14 @@ export class InnovatAgent {
         }, { campusN: campusName, cicloT: cicloTarget });
 
         if (clicked) {
-          console.log(`[InnovatAgent] ✅ Campus seleccionado exitosamente. Esperando postback...`);
-          await this.browser.wait(3000);
+          console.log(`[InnovatAgent] ✅ Campus seleccionado exitosamente. Esperando que el servidor procese...`);
+          await this.browser.wait(4000); // Dar más tiempo sólido, el click anterior es el real problema
+          // Opcionalmente forzar un recargo extra seguro
+          const currentUrl = page.url();
+          if (currentUrl.includes('Principal.aspx') || currentUrl.includes('Padres.aspx')) {
+             await page.goto(currentUrl).catch(() => {});
+             await this.browser.wait(1000);
+          }
         } else {
           await this.browser.wait(400);
         }
@@ -834,13 +846,7 @@ export class InnovatAgent {
     try {
       const page = this.browser.getPage();
       console.log(`[InnovatAgent] ===== NAVEGACIÓN A INTERFASE BANCARIA =====`);
-
-      // 1. Cerrar cualquier menú abierto
-      await page.evaluate(() => {
-        const activeMenus = document.querySelectorAll('li.act_section');
-        activeMenus.forEach(m => (m as HTMLElement).click());
-      }).catch(() => {});
-      await this.browser.wait(400);
+      // Eliminada limpieza riesgosa de act_section porque causa .NET Server Error (YSOD/404)
 
       // Wrapper inteligente para esperar animaciones CSS o menús lentos sin timeouts fijos ciegos
       const clickMenuWithRetry = async (searchFn: () => boolean, retries = 5) => {

@@ -1216,10 +1216,12 @@ export class InnovatAgent {
 
           // Estrategia super inteligente: Buscar <select> original y descartar los de "Nombre/Apellido"
           const todosLosSelects = Array.from(document.querySelectorAll('select'));
+          let bestContainer: Element | null = null;
+          
           for (const s of todosLosSelects) {
               const optionsTexto = Array.from(s.options).map(o => o.text.toLowerCase());
               // Si es un combo de búsqueda (tiene 'apellido' o 'nombre') lo saltamos
-              const esCriterio = optionsTexto.some(t => t.includes('apellido') || t.includes('matrícula') || t.includes('matricula'));
+              const esCriterio = optionsTexto.some(t => t.includes('apellido') || t.includes('matrícula') || t.includes('matricula') || t.includes('matricula:'));
               // Si tiene miles de opciones, probable es alumno
               const esAlumno = optionsTexto.length > 50;
 
@@ -1229,45 +1231,51 @@ export class InnovatAgent {
                   if (s.nextElementSibling && s.nextElementSibling.classList.contains('select2-container')) {
                       container = s.nextElementSibling;
                   } else {
-                      // buscar id en data-select2-id o por select2-
                       container = document.querySelector(`.select2-container[id*='${s.id}'], .select2-container[data-select2-id]`); 
                   }
-                  
-                  // intentar DOM traversal común de Select2 v3
                   if (!container) {
                       const possibleContainer = s.parentElement?.querySelector('.select2-container');
                       if (possibleContainer) container = possibleContainer;
                   }
 
                   if (container && (container as HTMLElement).offsetParent !== null) {
-                      const clickObj = container.querySelector('.select2-choice') || container.querySelector('.select2-selection');
-                      if (clickObj) {
-                          (clickObj as HTMLElement).click();
-                          return true;
-                      }
+                      bestContainer = container;
+                      break;
                   }
               }
           }
 
-          // Respaldo total: El ÚLTIMO select2 visible suele ser el de Formato
-          const selectsVisibles = Array.from(document.querySelectorAll('.select2-container')).filter(c => (c as HTMLElement).offsetParent !== null);
-          if (selectsVisibles.length >= 2) {
-              // Generalmente Alumno = 0, Criterio = 1, Formato = 2. 
-              // En cualquier caso, el Formato casi siempre es el último de esta pantalla.
-              const elUltimo = selectsVisibles[selectsVisibles.length - 1];
-              const clickObj = elUltimo.querySelector('.select2-choice') || elUltimo.querySelector('.select2-selection');
-              if (clickObj) {
-                  (clickObj as HTMLElement).click();
-                  return true;
+          if (!bestContainer) {
+              // Respaldo total: El ÚLTIMO select2 visible suele ser el de Formato
+              const selectsVisibles = Array.from(document.querySelectorAll('.select2-container')).filter(c => (c as HTMLElement).offsetParent !== null);
+              if (selectsVisibles.length >= 2) {
+                  bestContainer = selectsVisibles[selectsVisibles.length - 1];
               }
           }
 
-          return false;
+          if (bestContainer) {
+              const idTemp = 'select2-formato-valido-' + Date.now();
+              const choice = bestContainer.querySelector('.select2-choice') || bestContainer.querySelector('.select2-selection');
+              if (choice) {
+                 choice.id = choice.id || idTemp;
+                 return '#' + choice.id;
+              }
+              bestContainer.id = bestContainer.id || idTemp;
+              return '#' + bestContainer.id;
+          }
+
+          return null;
       });
 
       if (clickLogradoFormato) {
-          console.log(`[InnovatAgent] Caja de formato clickeada. Esperando UI...`);
-          await this.browser.wait(400); 
+          console.log(`[InnovatAgent] Abriendo caja de formato con Playwright Native Click en ${clickLogradoFormato}...`);
+          try {
+              // Hacemos el click NATIVO DEL NAVEGADOR con Playwright. Esto ASEGURA EL FOCO.
+              await page.locator(clickLogradoFormato).click({ force: true });
+          } catch(e) {
+              console.log(`[InnovatAgent] Falló el click de Playwright, reintentando...`);
+          }
+          await this.browser.wait(600); // Esperar animación del menú desplegable
 
           console.log(`[InnovatAgent] Buscando literalmente la opción correcta en la lista desplegable...`);
           

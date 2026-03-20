@@ -851,7 +851,6 @@ export class InnovatAgent {
       };
 
       console.log(`[InnovatAgent] Paso 1: Click en Interfase Bancaria...`);
-      let visibleMenus = '';
       const clickedInterfase = await clickMenuWithRetry(() => {
         const elements = Array.from(document.querySelectorAll('span, a'));
         const target = elements.find(el => {
@@ -864,16 +863,19 @@ export class InnovatAgent {
           );
         });
         if (target) {
-          target.click();
+          (target as HTMLElement).click();
           return true;
-        }
-        if (!visibleMenus) {
-           visibleMenus = elements.map(e => e.textContent?.trim()).filter(t => t && t.length > 3).slice(0, 40).join('|');
         }
         return false;
       });
-      if (!clickedInterfase) throw new Error(`No se encontró el menú Interfase Bancaria. Top elementos: ${visibleMenus.substring(0, 100)}`);
-
+      
+      if (!clickedInterfase) {
+        const visibleMenus = await page.evaluate(() => {
+           const elements = Array.from(document.querySelectorAll('span, a'));
+           return elements.map(e => e.textContent?.trim()).filter(t => t && t.length > 3).slice(0, 40).join('|');
+        }).catch(() => 'no_leido');
+        throw new Error(`No se encontró el menú Interfase. Elementos visibles: ${visibleMenus.substring(0, 100)}`);
+      }
       // 3. Click en OPERACIÓN
       console.log(`[InnovatAgent] Paso 2: Click en Operación...`);
       const clickedOperacion = await clickMenuWithRetry(() => {

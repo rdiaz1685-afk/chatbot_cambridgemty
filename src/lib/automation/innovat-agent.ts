@@ -1165,16 +1165,18 @@ export class InnovatAgent {
           await page.keyboard.type(matricula, { delay: 150 });
       }
 
-      console.log(`[InnovatAgent] Esperando 4 segundos a que Innovat responda Ajax...`);
-      await this.browser.wait(4000); // FIX: Estaba en 400ms por error tipográfico!
+      console.log(`[InnovatAgent] Esperando a que Innovat responda Ajax (dinámico)...`);
       
-      console.log(`[InnovatAgent] Forzando clic exacto en el alumno correcto del dropdown de Select2...`);
+      console.log(`[InnovatAgent] Buscando clic exacto en el alumno correcto del dropdown de Select2...`);
       // VALLADARES (16580) aparece antes que ZARATE (6580) porque Select2 ordena por apellido (V antes que Z).
       // Debemos buscar literalmente la coincidencia exacta de "(6580)".
-      const exactStudentMatch = new RegExp(`\\(${matricula}\\)`, 'i');
-      const studentResult = page.locator('.select2-results li, .select2-result, .select2-result-label')
+      const exactStudentMatch = new RegExp(`\\(${matricula.trim()}\\)`, 'i');
+      const studentResult = page.locator('.select2-results li, .select2-result-label, .select2-result')
                                 .filter({ hasText: exactStudentMatch })
                                 .first();
+      
+      // ESPERA DINÁMICA: Te ahorra hasta 3.9 segundos si el servidor responde rápido, en lugar de wait(4000) fijo
+      await studentResult.waitFor({ state: 'visible', timeout: 5500 }).catch(() => {});
       
       let clickedStudent = false;
       if (await studentResult.isVisible().catch(() => false)) {
@@ -1272,24 +1274,22 @@ export class InnovatAgent {
           console.log(`[InnovatAgent] Buscando literalmente la opción correcta en la lista desplegable mediante JS...`);
           
           // ESTRATEGIA 1: Escribir en el input de búsqueda de Select2 para filtrar opciones
-          // Select2 no renderiza las opciones en el DOM hasta que se escribe en el campo de búsqueda.
-          // Primero escribimos el texto y esperamos que el dropdown filtre, luego clickeamos.
           console.log(`[InnovatAgent] Escribiendo '${mes}' en el campo de búsqueda de Select2...`);
           const inputSelect2 = page.locator('.select2-input:visible, .select2-search__field:visible, .select2-search input:visible').first();
           try {
               if (await inputSelect2.isVisible({ timeout: 1500 })) {
                   await inputSelect2.fill('');
-                  await inputSelect2.type(mes, { delay: 120 });
-                  await this.browser.wait(1800); // Esperar que Select2 filtre via Ajax/local
+                  await inputSelect2.type(mes, { delay: 100 });
               } else {
-                  // Si no hay input visible, teclear directamente (Select2 v3 sin searchbox)
-                  await page.keyboard.type(mes, { delay: 120 });
-                  await this.browser.wait(1800);
+                  await page.keyboard.type(mes, { delay: 100 });
               }
           } catch(e) {
-              await page.keyboard.type(mes, { delay: 120 });
-              await this.browser.wait(1800);
+              await page.keyboard.type(mes, { delay: 100 });
           }
+
+          // ESPERA DINÁMICA PARA FORMATO
+          const candidateLocator = page.locator('.select2-results li, .select2-result-label, .select2-result').filter({ hasText: new RegExp(mes, 'i') }).first();
+          await candidateLocator.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
 
           const clickedOption = await page.evaluate((mesParams) => {
               const mesLower = mesParams.toLowerCase().trim();

@@ -1205,49 +1205,87 @@ export class InnovatAgent {
 
       console.log(`[InnovatAgent] Buscando la caja de Formato (abajo de alumno)...`);
 
-      // Estrategia robusta inyectando JS para buscar el contenedor de select2 exacto
+      // Estrategia para encontrar el dropdown de Formato usando la etiqueta "Formato" como ancla
+      // La página tiene esta estructura:
+      //   Fila 1: [label:Alumno] [select2:nombre alumno]
+      //   Fila 2: [select2:FORMATO] [select2:Matrícula/Apellido] [radios] [checkboxes] [btn GENERAR]
+      // El dropdown de Formato es el PRIMERO de la fila 2 — está junto a la etiqueta "Formato" o es el único vacío
       const clickLogradoFormato = await page.evaluate(() => {
-          // Buscamos etiquetas que digan Formato
-          const elementosTexto = Array.from(document.querySelectorAll('label, th, td, span')).filter(el => {
-              const text = el.textContent?.trim().toLowerCase() || '';
-              const isVisible = (el as HTMLElement).offsetParent !== null;
-              return isVisible && text.includes('formato');
-          });
-
-          // Estrategia definitiva: Recorrer VISUALMENTE todos los select2 visibles
           const selectsVisibles = Array.from(document.querySelectorAll('.select2-container'))
                                      .filter(c => (c as HTMLElement).offsetParent !== null);
-          
-          let bestContainer: Element | null = null;
 
-          for (const container of selectsVisibles) {
-              const text = (container.textContent || '').toLowerCase();
-              // Descartamos si el texto visible en el dropdown dice Apellido, Nombre o Alumno
-              // También descartaremos opciones muy largas que puedan ser el nombre de un alumno actual
-              const isFiltro = text.includes('apellido') || text.includes('nombre') || text.includes('matr') || text.length > 50;
-              
-              if (!isFiltro) {
-                  // ¡ÉSTE DEBE SER EL FORMATO! (Suele estar en blanco o decir "Seleccionar...")
-                  bestContainer = container;
-                  // No hacemos break por si el Formato es el último, o podríamos hacer un arreglo y tomar el único libre.
-                  // Pero para seguridad lo asignamos.
+          // ESTRATEGIA 1: Buscar el select2 que está justo después de una etiqueta "Formato"
+          const labels = Array.from(document.querySelectorAll('label, span, td, th'));
+          for (const label of labels) {
+              const txt = label.textContent?.trim().toLowerCase() || '';
+              const isVisible = (label as HTMLElement).offsetParent !== null;
+              if (!isVisible || !txt.includes('formato')) continue;
+
+              // Buscar el select2 más cercano al label
+              let sibling = label.nextElementSibling;
+              while (sibling) {
+                  if (sibling.classList.contains('select2-container') || sibling.querySelector('.select2-container')) {
+                      const container = sibling.classList.contains('select2-container') 
+                          ? sibling 
+                          : sibling.querySelector('.select2-container')!;
+                      const choice = container.querySelector('.select2-choice') || container.querySelector('.select2-selection');
+                      if (choice) {
+                          const idTemp = 'formato-' + Date.now();
+                          (choice as HTMLElement).id = (choice as HTMLElement).id || idTemp;
+                          return '#' + (choice as HTMLElement).id;
+                      }
+                  }
+                  sibling = sibling.nextElementSibling;
+              }
+
+              // Buscar en el padre
+              const parent = label.parentElement;
+              if (parent) {
+                  const container = parent.querySelector('.select2-container');
+                  if (container) {
+                      const choice = container.querySelector('.select2-choice') || container.querySelector('.select2-selection');
+                      if (choice) {
+                          const idTemp = 'formato-' + Date.now();
+                          (choice as HTMLElement).id = (choice as HTMLElement).id || idTemp;
+                          return '#' + (choice as HTMLElement).id;
+                      }
+                  }
               }
           }
 
-          if (!bestContainer && selectsVisibles.length >= 2) {
-              // Si todo falló, asumimos que el del formato es el [1] que suele estar a la izq del filtro en la 2da fila
-              bestContainer = selectsVisibles[1];
-          }
+          // ESTRATEGIA 2: El dropdown de Formato es el que tiene valor vacío o "Seleccionar"
+          // El de Alumno ya tiene un nombre largo seleccionado, el de Matrícula dice "Matrícula" o "Apellido"
+          // Por eliminación, el VACÍO o con texto corto que NO sea nombre de alumno es el Formato
+          const candidatos = selectsVisibles.filter(c => {
+              const txt = (c.textContent || '').trim().toLowerCase();
+              const esAlumno = txt.length > 30; // Nombres de alumnos son largos
+              const esFiltro = txt.includes('matrícula') || txt.includes('matricula') || 
+                               txt.includes('apellido') || txt.includes('nombre') ||
+                               txt.includes('activo') || txt.includes('inactivo');
+              return !esAlumno && !esFiltro;
+          });
 
-          if (bestContainer) {
-              const idTemp = 'select2-formato-valido-' + Date.now();
-              const choice = bestContainer.querySelector('.select2-choice') || bestContainer.querySelector('.select2-selection');
+          if (candidatos.length > 0) {
+              // Tomar el primero que quede (debería ser el de Formato)
+              const container = candidatos[0];
+              const choice = container.querySelector('.select2-choice') || container.querySelector('.select2-selection');
               if (choice) {
-                 choice.id = choice.id || idTemp;
-                 return '#' + choice.id;
+                  const idTemp = 'formato-' + Date.now();
+                  (choice as HTMLElement).id = (choice as HTMLElement).id || idTemp;
+                  return '#' + (choice as HTMLElement).id;
               }
-              bestContainer.id = bestContainer.id || idTemp;
-              return '#' + bestContainer.id;
+          }
+
+          // ESTRATEGIA 3 (último recurso): El segundo select2 visible de la página
+          // Orden típico: [0]=Alumno, [1]=Formato, [2]=Matrícula
+          if (selectsVisibles.length >= 2) {
+              const container = selectsVisibles[1];
+              const choice = container.querySelector('.select2-choice') || container.querySelector('.select2-selection');
+              if (choice) {
+                  const idTemp = 'formato-' + Date.now();
+                  (choice as HTMLElement).id = (choice as HTMLElement).id || idTemp;
+                  return '#' + (choice as HTMLElement).id;
+              }
           }
 
           return null;

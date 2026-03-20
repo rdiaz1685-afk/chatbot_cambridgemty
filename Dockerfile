@@ -9,7 +9,7 @@ COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 
 # Instalar dependencias
-RUN npm ci
+RUN npm install
 
 # Generar cliente de Prisma
 RUN npx prisma generate

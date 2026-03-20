@@ -171,13 +171,24 @@ export class InnovatAgent {
         }
         matricula = resultMatricula.matricula;
         console.log(`[InnovatAgent] ✅ Matrícula recuperada dinámicamente: ${matricula}`);
-        
-        // Regresar al Home para asegurar que la navegación a Interfase Bancaria funciona desde una base limpia
-        await this.browser.getPage().goto(config.innovat.url + 'Principal.aspx');
-        await this.browser.wait(600);
       } else {
         console.log(`[InnovatAgent] ✅ Matrícula recuperada (evitando re-escanear alumnos): ${matricula}`);
       }
+
+      // IMPORTANTE: Forzar una recarga limpia mediante GET a Principal.aspx 
+      // para descartar cualquier posible corrupción del ViewState del último postback
+      try {
+        const page = this.browser.getPage();
+        const urlObj = new URL(page.url());
+        const urlPathSegments = urlObj.pathname.split('/').filter(p => p.length > 0);
+        if (urlPathSegments.length > 0 && urlPathSegments[urlPathSegments.length - 1].toLowerCase().includes('.aspx')) {
+            urlPathSegments.pop();
+        }
+        const safePrincipalUrl = `${urlObj.origin}/${urlPathSegments.join('/')}/Principal.aspx`;
+        console.log(`[InnovatAgent] Forzando sesión limpia: ${safePrincipalUrl}`);
+        await page.goto(safePrincipalUrl).catch(() => {});
+        await this.browser.wait(1500);
+      } catch (err) { }
 
       // PASO 3: Navegar directamente a Interfase Bancaria
       console.log(`[InnovatAgent] --- Navegando directamente a Interfase Bancaria ---`);

@@ -184,9 +184,10 @@ export class InnovatAgent {
         if (urlPathSegments.length > 0 && urlPathSegments[urlPathSegments.length - 1].toLowerCase().includes('.aspx')) {
             urlPathSegments.pop();
         }
-        const safePrincipalUrl = `${urlObj.origin}/${urlPathSegments.join('/')}/Principal.aspx`;
-        console.log(`[InnovatAgent] Forzando sesión limpia: ${safePrincipalUrl}`);
-        await page.goto(safePrincipalUrl).catch(() => {});
+        // URL real de Innovat: https://innovat1.mx/Gaia/32.3.1/#/Inicio
+        const safeInicioUrl = `${urlObj.origin}/${urlPathSegments.join('/')}/#/Inicio`;
+        console.log(`[InnovatAgent] Forzando sesión limpia: ${safeInicioUrl}`);
+        await page.goto(safeInicioUrl).catch(() => {});
         await this.browser.wait(1500);
       } catch (err) { }
 
@@ -339,7 +340,7 @@ export class InnovatAgent {
           await this.browser.wait(4000); // Dar más tiempo sólido, el click anterior es el real problema
           // Opcionalmente forzar un recargo extra seguro
           const currentUrl = page.url();
-          if (currentUrl.includes('Principal.aspx') || currentUrl.includes('Padres.aspx')) {
+          if (currentUrl.includes('#/Inicio') || currentUrl.includes('Inicio') || currentUrl.includes('Padres')) {
              await page.goto(currentUrl).catch(() => {});
              await this.browser.wait(1000);
           }
@@ -859,10 +860,11 @@ export class InnovatAgent {
       const page = this.browser.getPage();
       console.log(`[InnovatAgent] ===== NAVEGACIÓN A INTERFASE BANCARIA =====`);
       
-      // Navegar al Principal primero para asegurar estado limpio del menú
-      // Esto evita el Server Error 404 que ocurre cuando el menú queda en estado inconsistente
-      console.log(`[InnovatAgent] Navegando a Principal para estado limpio...`);
-      await page.goto(config.innovat.url.replace('login', 'Principal.aspx')).catch(() => {});
+      // Navegar al Inicio para asegurar estado limpio del menú
+      // URL real de Innovat post-login: https://innovat1.mx/Gaia/32.3.1/#/Inicio
+      console.log(`[InnovatAgent] Navegando a #/Inicio para estado limpio...`);
+      const baseUrl = config.innovat.url.replace(/\/login$/i, '').replace(/\/Login$/i, '');
+      await page.goto(`${baseUrl}/#/Inicio`).catch(() => {});
       await this.browser.wait(3000);
 
       // Wrapper inteligente para esperar animaciones CSS o menús lentos sin timeouts fijos ciegos

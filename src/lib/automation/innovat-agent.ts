@@ -1214,43 +1214,29 @@ export class InnovatAgent {
               return isVisible && text.includes('formato');
           });
 
-          // Estrategia super inteligente: Buscar <select> original y descartar los de "Nombre/Apellido"
-          const todosLosSelects = Array.from(document.querySelectorAll('select'));
-          let bestContainer: Element | null = null;
+          // Estrategia definitiva: Recorrer VISUALMENTE todos los select2 visibles
+          const selectsVisibles = Array.from(document.querySelectorAll('.select2-container'))
+                                     .filter(c => (c as HTMLElement).offsetParent !== null);
           
-          for (const s of todosLosSelects) {
-              const optionsTexto = Array.from(s.options).map(o => o.text.toLowerCase());
-              // Si es un combo de búsqueda (tiene 'apellido' o 'nombre') lo saltamos
-              const esCriterio = optionsTexto.some(t => t.includes('apellido') || t.includes('matrícula') || t.includes('matricula') || t.includes('matricula:'));
-              // Si tiene miles de opciones, probable es alumno
-              const esAlumno = optionsTexto.length > 50;
+          let bestContainer: Element | null = null;
 
-              if (!esCriterio && !esAlumno) {
-                  // Buscar su contenedor select2 asociado
-                  let container: Element | null = null;
-                  if (s.nextElementSibling && s.nextElementSibling.classList.contains('select2-container')) {
-                      container = s.nextElementSibling;
-                  } else {
-                      container = document.querySelector(`.select2-container[id*='${s.id}'], .select2-container[data-select2-id]`); 
-                  }
-                  if (!container) {
-                      const possibleContainer = s.parentElement?.querySelector('.select2-container');
-                      if (possibleContainer) container = possibleContainer;
-                  }
-
-                  if (container && (container as HTMLElement).offsetParent !== null) {
-                      bestContainer = container;
-                      break;
-                  }
+          for (const container of selectsVisibles) {
+              const text = (container.textContent || '').toLowerCase();
+              // Descartamos si el texto visible en el dropdown dice Apellido, Nombre o Alumno
+              // También descartaremos opciones muy largas que puedan ser el nombre de un alumno actual
+              const isFiltro = text.includes('apellido') || text.includes('nombre') || text.includes('matr') || text.length > 50;
+              
+              if (!isFiltro) {
+                  // ¡ÉSTE DEBE SER EL FORMATO! (Suele estar en blanco o decir "Seleccionar...")
+                  bestContainer = container;
+                  // No hacemos break por si el Formato es el último, o podríamos hacer un arreglo y tomar el único libre.
+                  // Pero para seguridad lo asignamos.
               }
           }
 
-          if (!bestContainer) {
-              // Respaldo total: El ÚLTIMO select2 visible suele ser el de Formato
-              const selectsVisibles = Array.from(document.querySelectorAll('.select2-container')).filter(c => (c as HTMLElement).offsetParent !== null);
-              if (selectsVisibles.length >= 2) {
-                  bestContainer = selectsVisibles[selectsVisibles.length - 1];
-              }
+          if (!bestContainer && selectsVisibles.length >= 2) {
+              // Si todo falló, asumimos que el del formato es el [1] que suele estar a la izq del filtro en la 2da fila
+              bestContainer = selectsVisibles[1];
           }
 
           if (bestContainer) {

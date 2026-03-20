@@ -1517,21 +1517,22 @@ export class InnovatAgent {
       }
 
       const fileName = `ficha_${curp}_${Date.now()}.pdf`;
-      const downloadDir = path.join(process.cwd(), 'download');
-      const downloadPath = path.join(downloadDir, fileName);
+      let base64Data = "";
       
-      if (!fs.existsSync(downloadDir)) {
-        fs.mkdirSync(downloadDir, { recursive: true });
-      }
-
       if (finalResponseBody) {
-         fs.writeFileSync(downloadPath, finalResponseBody);
-         const byteLength = finalResponseBody ? finalResponseBody.length : 0;
-         console.log(`[InnovatAgent] Ficha binaria guardada. Peso: ${byteLength} bytes`);
+         base64Data = Buffer.from(finalResponseBody).toString('base64');
+         console.log(`[InnovatAgent] Ficha binaria procesada en memoria. Peso: ${finalResponseBody.length} bytes`);
       } else if (finalDownload) {
-         await finalDownload.saveAs(downloadPath);
-         console.log(`[InnovatAgent] Ficha guardada vía Download Event clásico.`);
+         const os = require('os');
+         const tmpPath = path.join(os.tmpdir(), fileName);
+         await finalDownload.saveAs(tmpPath);
+         const fileBuffer = fs.readFileSync(tmpPath);
+         base64Data = fileBuffer.toString('base64');
+         try { fs.unlinkSync(tmpPath); } catch(e) {}
+         console.log(`[InnovatAgent] Ficha extraída vía Download Event clásico y enviada a memoria.`);
       }
+      
+      const fileUrlDataUri = `data:application/pdf;base64,${base64Data}`;
       
       // Limpieza de basuras visuales (cerrar popups blancos si los hubo)
       const pages = context.pages();
@@ -1557,7 +1558,7 @@ export class InnovatAgent {
             concepto: conceptoId || 'Colegiatura Abril',
             monto: 0,
             fechaLimite: new Date(),
-            fileUrl: `/api/download/${fileName}`,
+            fileUrl: fileUrlDataUri,
           },
         },
       };

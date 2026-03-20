@@ -539,7 +539,7 @@ export default function ChatPage() {
                             >
                               <a 
                                 href={(message.metadata.data as any).fichaPago.fileUrl} 
-                                download 
+                                download="Ficha_de_Pago.pdf" 
                                 className="flex items-center justify-center gap-2"
                               >
                                 <Send className="h-4 w-4 rotate-90" />

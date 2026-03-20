@@ -317,9 +317,11 @@ export class InnovatAgent {
         }, { campusN: campusName, cicloT: cicloTarget });
 
         if (clicked) {
-          console.log(`[InnovatAgent] ✅ Campus seleccionado exitosamente`);
+          console.log(`[InnovatAgent] ✅ Campus seleccionado exitosamente. Esperando postback...`);
+          await this.browser.wait(3000);
+        } else {
+          await this.browser.wait(400);
         }
-        await this.browser.wait(400);
       }
 
       return { success: true };

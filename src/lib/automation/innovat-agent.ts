@@ -250,7 +250,7 @@ export class InnovatAgent {
       const page = this.browser.getPage();
       console.log(`[InnovatAgent] Navegando a: ${config.innovat.url}`);
       await this.browser.navigateTo(config.innovat.url);
-      await this.browser.wait(400);
+      await this.browser.wait(2000);
 
       await page.evaluate(() => {
         const btns = Array.from(document.querySelectorAll('.uk-modal-close-default, .close, [data-uk-close]')) as HTMLElement[];
@@ -270,7 +270,8 @@ export class InnovatAgent {
       await page.locator('#Contrasena, input[name="Contrasena"]').fill(config.innovat.credentials.password);
       await page.locator('button:has-text("Entrar"), button[type="submit"]').click();
 
-      await this.browser.wait(400);
+      // Esperar que Innovat cargue completamente el dashboard post-login
+      await this.browser.wait(6000);
       const currentUrl = page.url().toLowerCase();
       console.log(`[InnovatAgent] URL post-login: ${currentUrl}`);
 
@@ -591,11 +592,11 @@ export class InnovatAgent {
       await this.browser.wait(400);
 
       // Wrapper inteligente para esperar animaciones CSS o menús lentos sin timeouts fijos ciegos
-      const clickMenuWithRetry = async (searchFn: () => boolean, retries = 5) => {
+      const clickMenuWithRetry = async (searchFn: () => boolean, retries = 10) => {
         for (let i = 0; i < retries; i++) {
            const success = await page.evaluate(searchFn);
            if (success) return true;
-           await this.browser.wait(400); // 400ms por intento
+           await this.browser.wait(800); // 800ms por intento — más robusto en Vercel
         }
         return false;
       };
@@ -857,14 +858,19 @@ export class InnovatAgent {
     try {
       const page = this.browser.getPage();
       console.log(`[InnovatAgent] ===== NAVEGACIÓN A INTERFASE BANCARIA =====`);
-      // Eliminada limpieza riesgosa de act_section porque causa .NET Server Error (YSOD/404)
+      
+      // Navegar al Principal primero para asegurar estado limpio del menú
+      // Esto evita el Server Error 404 que ocurre cuando el menú queda en estado inconsistente
+      console.log(`[InnovatAgent] Navegando a Principal para estado limpio...`);
+      await page.goto(config.innovat.url.replace('login', 'Principal.aspx')).catch(() => {});
+      await this.browser.wait(3000);
 
       // Wrapper inteligente para esperar animaciones CSS o menús lentos sin timeouts fijos ciegos
-      const clickMenuWithRetry = async (searchFn: () => boolean, retries = 5) => {
+      const clickMenuWithRetry = async (searchFn: () => boolean, retries = 10) => {
         for (let i = 0; i < retries; i++) {
            const success = await page.evaluate(searchFn);
            if (success) return true;
-           await this.browser.wait(400); // 400ms por intento
+           await this.browser.wait(800); // 800ms por intento — más robusto en Vercel
         }
         return false;
       };
@@ -888,6 +894,9 @@ export class InnovatAgent {
         return false;
       });
       
+      // Esperar que el submenú de Interfase Bancaria se despliegue
+      await this.browser.wait(2000);
+
       if (!clickedInterfase) {
         const visibleMenus = await page.evaluate(() => {
            const elements = Array.from(document.querySelectorAll('span, a'));
@@ -911,6 +920,7 @@ export class InnovatAgent {
         return false;
       });
       if (!clickedOperacion) throw new Error('No se encontró el submenú Operación');
+      await this.browser.wait(1500); // Esperar que se despliegue el submenú de Operación
 
       // 4. Click en IMPRESIÓN DE FICHAS DE DEPÓSITO POR ALUMNO
       console.log(`[InnovatAgent] Paso 3: Click en Impresión de Fichas...`);
@@ -933,7 +943,7 @@ export class InnovatAgent {
       });
       if (!clickedFichas) throw new Error('No se encontró Impresión de Fichas de Depósito por Alumno');
       
-      await this.browser.wait(1000); // 1 sec of graceful waiting post-click
+      await this.browser.wait(4000); // Esperar que cargue el módulo de fichas completamente
       console.log(`[InnovatAgent] ✅ Llegamos al módulo de Fichas de Depósito`);
       return { success: true };
 

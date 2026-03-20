@@ -1166,8 +1166,8 @@ export class InnovatAgent {
       }
 
       console.log(`[InnovatAgent] Esperando 4 segundos a que Innovat responda Ajax...`);
-      await this.browser.wait(400); 
-
+      await this.browser.wait(4000); // FIX: Estaba en 400ms por error tipográfico!
+      
       console.log(`[InnovatAgent] Forzando clic exacto en el alumno correcto del dropdown de Select2...`);
       // VALLADARES (16580) aparece antes que ZARATE (6580) porque Select2 ordena por apellido (V antes que Z).
       // Debemos buscar literalmente la coincidencia exacta de "(6580)".
@@ -1191,9 +1191,11 @@ export class InnovatAgent {
       if (!clickedStudent) {
           console.log(`[InnovatAgent] Fallback a Enter si el match exacto falla...`);
           await page.keyboard.press('Enter');
+          await this.browser.wait(600);
+          await page.keyboard.press('Tab'); // A veces un Tab asimila la selección
       }
 
-      await this.browser.wait(600);
+      await this.browser.wait(1000);
 
       // PASO 2: Seleccionar formato de ficha (mes correspondiente)
       console.log(`[InnovatAgent] Paso 2: Seleccionando formato de ficha (${conceptoId})...`);

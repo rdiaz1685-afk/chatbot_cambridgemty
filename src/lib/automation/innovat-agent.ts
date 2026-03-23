@@ -1208,180 +1208,146 @@ export class InnovatAgent {
 
       await this.browser.wait(1000);
 
-      // PASO 2: Seleccionar formato de ficha (mes correspondiente)
+      // PASO 2: Seleccionar formato de ficha mediante la UI de Select2
       console.log(`[InnovatAgent] Paso 2: Seleccionando formato de ficha (${conceptoId})...`);
-      const mes = conceptoId ? this.extraerMes(conceptoId) : 'Abril';
-      console.log(`[InnovatAgent] Mes a buscar en formato: "${mes}"`);
+      const mes = conceptoId ? this.extraerMes(conceptoId) : (() => {
+          const m = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+          return m[new Date().getMonth()];
+      })();
+      console.log(`[InnovatAgent] Formato a buscar: "${mes}"`);
 
-      // ── DIAGNÓSTICO: imprimir todas las opciones de cada <select> para ver nombres exactos de Innovat ──
-      const allSelectOptions = await page.evaluate(() => {
-          return Array.from(document.querySelectorAll('select')).map((sel, i) => ({
-              index: i,
-              id: sel.id || sel.name || `(sin id)`,
-              options: Array.from(sel.options).map(o => `"${o.text}" [val=${o.value}]`).join(', ')
-          }));
-      });
-      console.log(`[InnovatAgent] 🔍 Selects en página de fichas:`, JSON.stringify(allSelectOptions, null, 2));
+      // Extraer tipo y mes del string resultante de extraerMes()
+      // Ej: "Estancia Larga-Marzo" → tipo="estancia", mesK="marzo"
+      // Ej: "Marzo" (colegiatura) → tipo="", mesK="marzo"
+      const mesClean = mes.toLowerCase()
+          .replace(/\([^)]*\)/g, ' ')
+          .replace(/-/g, ' ')
+          .replace(/[^a-záéíóúüñ\s]/g, ' ');
+      const mesParts = mesClean.split(/\s+/).filter(k => k.length > 2);
+      const tipoConcepto = mesParts[0] || ''; // "estancia", "clases", etc.
+      const mesConcepto  = mesParts[mesParts.length - 1] || ''; // "marzo", "abril", etc.
+      console.log(`[InnovatAgent] tipo="${tipoConcepto}" mes="${mesConcepto}"`);
 
-      // ── ESTRATEGIA PRINCIPAL: Usar el <select> nativo que Select2 envuelve ──
-      // Select2 siempre tiene un <select> oculto debajo. Identificamos cuál de los selects
-      // tiene opciones que contienen el tipo de concepto + mes buscados.
-      //
-      // La estrategia es: (1) identificar cuál <select> es el de Formato (no el de Alumno)
-      // y (2) dentro de ese select, encontrar la opción correcta por tipo de concepto + mes.
-      const formatoSeleccionado = await page.evaluate((mesParam) => {
-          // PASO A: Identificar cuál <select> es el de FORMATO
-          // El de formato tiene opciones con meses o tipos de pago (no nombres de personas)
-          const FORMAT_KEYWORDS = [
-              'enero','febrero','marzo','abril','mayo','junio',
-              'julio','agosto','septiembre','octubre','noviembre','diciembre',
-              'mensual','ficha','pago','anualid','inscripci',
-              'estancia','extrac','clases','uniforme','material','reinscripci'
-          ];
+      // ── Paso 2A: Encontrar el select de Formato y su ID para localizar el wrapper Select2 ──
+      const formatSelectInfo = await page.evaluate((FORMAT_KEYS: string[]) => {
           const selects = Array.from(document.querySelectorAll('select'));
-          const formatSelect = selects.find(sel => {
+          const formatSel = selects.find(sel => {
               const opts = Array.from(sel.options).filter(o => o.value && o.value !== '');
-              const matches = opts.filter(o => FORMAT_KEYWORDS.some(k => o.text.toLowerCase().includes(k)));
-              return matches.length >= 2;
-          });
+              return opts.filter(o => FORMAT_KEYS.some(k => o.text.toLowerCase().includes(k))).length >= 2;
+          }) as HTMLSelectElement | undefined;
+          if (!formatSel) return null;
+          return {
+              id: formatSel.id,
+              name: formatSel.name,
+              options: Array.from(formatSel.options).map(o => ({ text: o.text, value: o.value }))
+          };
+      }, ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre','mensual','estancia','extrac','clases','inscripci','reinscripci','material','uniforme']);
 
-          if (!formatSelect) {
-              console.log('[Innovat] No se encontró el select de formato');
-              return null;
-          }
+      console.log(`[InnovatAgent] Select de formato:`, JSON.stringify(formatSelectInfo?.options?.map(o => o.text)));
 
-          // PASO B: Limpiar el parámetro — remover paréntesis y su contenido, dejar solo letras
-          // "Estancia Larga-Marzo" → tipo="estancia", mes="marzo"
-          // "Estancia Larga (5 dias)-Marzo" → mismo resultado
-          const cleaned = mesParam.toLowerCase()
-              .replace(/\([^)]*\)/g, ' ')  // quitar (5 dias), (1), etc.
-              .replace(/-/g, ' ')
-              .replace(/[^a-záéíóúüñ\s]/g, ' ');
-          const parts = cleaned.split(/\s+/).filter(k => k.length > 2);
-          const tipo = parts[0] || ''; // tipo de concepto: estancia, clases, colegiatura...
-          const mesK = parts[parts.length - 1] || ''; // mes: marzo, abril...
-          console.log(`[Innovat] Buscando formato: tipo="${tipo}" mes="${mesK}" en select id=${(formatSelect as HTMLSelectElement).id}`);
-
-          const options = Array.from((formatSelect as HTMLSelectElement).options);
-
-          // Intento 1: tipo + mes (ambas palabras clave presentes)
-          let match = options.find(o => {
-              const t = o.text.toLowerCase();
-              return tipo ? t.includes(tipo) && (mesK ? t.includes(mesK) : true) : false;
-          });
-          // Intento 2: solo tipo de concepto, EXCLUYENDO opciones anuales
-          // Ej: "estancia" → encuentra "Estancia Marzo" pero NO "Estancia Anual"
-          if (!match && tipo) {
-              match = options.find(o => {
-                  const t = o.text.toLowerCase();
-                  return t.includes(tipo) && !t.includes('anual') && !t.includes('anualidad');
-              });
-          }
-          // Intento 3: solo mes
-          if (!match && mesK) {
-              match = options.find(o => o.text.toLowerCase().includes(mesK));
-          }
-
-          if (match) {
-              (formatSelect as HTMLSelectElement).value = match.value;
-              // Disparar change para el select nativo
-              formatSelect.dispatchEvent(new Event('change', { bubbles: true }));
-              // Notificar a Select2 mediante jQuery (v3 usa esto para reflejar el cambio en la UI)
-              try {
-                  const jq = (window as any).jQuery || (window as any).$;
-                  if (jq) jq(formatSelect).trigger('change');
-              } catch(e) { /* jQuery no disponible, ok */ }
-              console.log(`[Innovat] ✅ Formato: "${match.text}" (val=${match.value})`);
-              return match.text;
-          }
-
-          const available = options.map(o => o.text).join(' | ');
-          console.log(`[Innovat] ⚠️ No se encontró opción. Disponibles: ${available}`);
-          return null;
-      }, mes);
-
-      if (formatoSeleccionado) {
-          console.log(`[InnovatAgent] ✅ Formato asignado en select nativo: "${formatoSeleccionado}"`);
-          await this.browser.wait(600); // Dar tiempo a Select2 para reflejar el cambio visualmente
+      if (!formatSelectInfo) {
+          console.warn('[InnovatAgent] ⚠️ No se encontró el select de formato');
       } else {
-          // ── ESTRATEGIA FALLBACK: Abrir el wrapper Select2 de Formato y hacer click en la opción ──
-          console.warn(`[InnovatAgent] ⚠️ Select nativo no encontró el mes "${mes}". Intentando via UI...`);
+          // ── Paso 2B: Encontrar la opción correcta en la lista ──
+          const { id: selId, options: selOptions } = formatSelectInfo;
 
-          // Encontrar qué <select> tiene al menos alguna opción que no sea vacía ni sea de alumno
-          // Los selects de alumno tienen opciones con nombres largos. El de Formato tiene meses.
-          const formatoContainerId = await page.evaluate(() => {
-              const selects = Array.from(document.querySelectorAll('select'));
-              for (const sel of selects) {
-                  const opts = Array.from(sel.options).filter(o => o.value && o.value !== '');
-                  // El select de formato tendrá opciones como "Enero", "Febrero", "Mensualidad", etc.
-                  const looksLikeFormat = opts.some(o => {
-                      const t = o.text.toLowerCase();
-                      return t.includes('mensual') || t.includes('enero') || t.includes('febrero') ||
-                             t.includes('marzo') || t.includes('abril') || t.includes('mayo') ||
-                             t.includes('junio') || t.includes('julio') || t.includes('agosto') ||
-                             t.includes('septiembre') || t.includes('octubre') || t.includes('noviembre') ||
-                             t.includes('diciembre') || t.includes('ficha') || t.includes('pago');
-                  });
-                  if (looksLikeFormat) {
-                      return sel.id || sel.name || null;
-                  }
-              }
-              return null;
-          });
-
-          if (formatoContainerId) {
-              // Usar el select2 que corresponde a ese select nativo
-              const select2Wrapper = page.locator(`#s2id_${formatoContainerId} .select2-choice, [data-select2-id="${formatoContainerId}"]`).first();
-              if (await select2Wrapper.isVisible({ timeout: 2000 }).catch(() => false)) {
-                  await select2Wrapper.click({ force: true });
-                  await this.browser.wait(600);
-              }
-          } else {
-              // Último recurso: abrir el primer select2 visible que no sea el de alumno
-              await page.evaluate(() => {
-                  const containers = Array.from(document.querySelectorAll('.select2-container'))
-                      .filter(c => (c as HTMLElement).offsetParent !== null);
-                  // Saltamos el 0 = Alumno (tiene nombre largo seleccionado)
-                  // Buscamos el que tiene texto vacío o corto (es el de Formato)
-                  const formato = containers.find(c => {
-                      const txt = (c.querySelector('.select2-chosen') as HTMLElement)?.innerText?.trim() || '';
-                      return txt === '' || txt.length < 15;
-                  });
-                  if (formato) {
-                      const choice = formato.querySelector('.select2-choice') as HTMLElement;
-                      if (choice) choice.click();
-                  }
+          // Buscar la mejor opción: tipo + mes, sin "anual"
+          const bestOption = (() => {
+              // Intento 1: tipo + mes, excluyendo anuales
+              let opt = selOptions.find(o => {
+                  const t = o.text.toLowerCase();
+                  return (tipoConcepto ? t.includes(tipoConcepto) : true)
+                      && (mesConcepto ? t.includes(mesConcepto) : true)
+                      && !t.includes('anual') && !t.includes('anualidad');
               });
-              await this.browser.wait(600);
-          }
+              // Intento 2: solo tipo, excluyendo anuales
+              if (!opt && tipoConcepto) {
+                  opt = selOptions.find(o => {
+                      const t = o.text.toLowerCase();
+                      return t.includes(tipoConcepto) && !t.includes('anual') && !t.includes('anualidad');
+                  });
+              }
+              // Intento 3: solo mes
+              if (!opt && mesConcepto) {
+                  opt = selOptions.find(o => o.text.toLowerCase().includes(mesConcepto));
+              }
+              return opt;
+          })();
 
-          // Escribir SOLO el tipo de concepto en el campo de búsqueda (no la cadena completa)
-          // Innovat tiene opciones como "Estancia Marzo", "Clases Extrac-Marzo", etc.
-          // Buscar por la primera palabra del tipo es más confiable que la cadena completa.
-          // Ej: mes="Estancia Larga-Marzo" → buscar solo "Estancia" (primera palabra)
-          const tipoParaBuscar = mes.split(/[-\s]/)[0]; // "Estancia", "Clases", "Colegiatura", etc.
-          console.log(`[InnovatAgent] Buscando en UI de Select2: "${tipoParaBuscar}"`);
-          const inputSelect2 = page.locator('.select2-input:visible, .select2-search__field:visible').first();
-          if (await inputSelect2.isVisible({ timeout: 1500 }).catch(() => false)) {
-              await inputSelect2.fill('');
-              await inputSelect2.type(tipoParaBuscar, { delay: 100 });
-          } else {
-              await page.keyboard.type(tipoParaBuscar, { delay: 100 });
-          }
-          await this.browser.wait(1500);
+          console.log(`[InnovatAgent] Mejor opción hallada: "${bestOption?.text}" (val=${bestOption?.value})`);
 
-          // Click en la opción que aparezca
-          const optionFallback = page.locator('.select2-results li, .select2-results__option')
-              .filter({ hasText: new RegExp(mes, 'i') }).first();
-          if (await optionFallback.isVisible({ timeout: 2000 }).catch(() => false)) {
-              await optionFallback.click({ force: true });
-              console.log(`[InnovatAgent] ✅ Formato seleccionado vía UI fallback`);
+          if (bestOption) {
+              // ── Paso 2C: Abrir el dropdown Select2 y hacer click en la opción ──
+              // El wrapper Select2 para un select con id="X" es "#s2id_X"
+              const wrapperId = selId ? `#s2id_${selId}` : null;
+              let select2Opened = false;
+
+              if (wrapperId) {
+                  const choiceBtn = page.locator(`${wrapperId} .select2-choice, ${wrapperId} .select2-selection`).first();
+                  if (await choiceBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+                      await choiceBtn.click({ force: true });
+                      await this.browser.wait(700);
+                      select2Opened = true;
+                      console.log(`[InnovatAgent] Dropdown de formato abierto via ${wrapperId}`);
+                  }
+              }
+
+              if (!select2Opened) {
+                  // Fallback: abrir Select2 usando jQuery API directamente
+                  await page.evaluate((sId) => {
+                      const jq = (window as any).$ || (window as any).jQuery;
+                      if (jq && sId) {
+                          jq('#' + sId).select2('open');
+                      } else {
+                          // Último recurso: click en el segundo .select2-choice visible
+                          const choices = Array.from(document.querySelectorAll('.select2-choice'))
+                              .filter(c => (c as HTMLElement).offsetParent !== null);
+                          // El primero tiene el nombre del alumno (largo), el segundo es Formato
+                          const fmt = choices.find(c => {
+                              const txt = (c.querySelector('.select2-chosen') as HTMLElement)?.innerText?.trim() || '';
+                              return txt.length < 20; // Formato tiene texto corto
+                          });
+                          if (fmt) (fmt as HTMLElement).click();
+                      }
+                  }, selId);
+                  await this.browser.wait(700);
+              }
+
+              // ── Paso 2D: Buscar y hacer click en la opción correcta en el dropdown abierto ──
+              // Buscar la opción por texto exacto o parcial, sin "anual"
+              const escapedText = bestOption.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const optLocator = page.locator('.select2-results li, .select2-results__option')
+                  .filter({ hasText: new RegExp(escapedText, 'i') })
+                  .first();
+
+              if (await optLocator.isVisible({ timeout: 2500 }).catch(() => false)) {
+                  await optLocator.evaluate(el => {
+                      el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+                      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+                      el.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true }));
+                      (el as HTMLElement).click();
+                  });
+                  await this.browser.wait(500);
+                  console.log(`[InnovatAgent] ✅ Formato seleccionado via UI: "${bestOption.text}"`);
+              } else {
+                  // Fallback: usar jQuery select2 val directamente
+                  const jqResult = await page.evaluate(({ sId, val }: { sId: string, val: string }) => {
+                      const jq = (window as any).$ || (window as any).jQuery;
+                      if (jq && sId) {
+                          jq('#' + sId).val(val).trigger('change');
+                          return true;
+                      }
+                      return false;
+                  }, { sId: selId, val: bestOption.value });
+                  console.log(`[InnovatAgent] ${jqResult ? '✅' : '⚠️'} Formato via jQuery val: ${bestOption.value}`);
+                  await this.browser.wait(500);
+              }
           } else {
-              await page.keyboard.press('Enter');
-              console.warn(`[InnovatAgent] ⚠️ Formato: presionando Enter como último recurso`);
+              console.warn(`[InnovatAgent] ⚠️ No se encontró opción de formato para: "${mes}"`);
           }
       }
       await this.browser.wait(400);
+
 
       // PASO 4: Activar checkbox "Tomar en cuenta para recargos"
       console.log(`[InnovatAgent] Paso 4: Activando recargos...`);

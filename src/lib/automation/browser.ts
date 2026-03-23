@@ -40,9 +40,10 @@ export class BrowserAutomation {
         // Browserless v2 usa CDP nativo, debemos usar connectOverCDP
         this.browser = await chromium.connectOverCDP(browserlessUrl);
       } else {
-        console.log('[Browser] Iniciando navegador local (modo visual)...');
+        const isHeadless = process.env.HEADLESS !== 'false'; // headless en servidor, visual en local si HEADLESS=false
+        console.log(`[Browser] Iniciando navegador local (headless: ${isHeadless})...`);
         this.browser = await chromium.launch({
-          headless: false, // Force false for visual debugging locally
+          headless: isHeadless,
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',

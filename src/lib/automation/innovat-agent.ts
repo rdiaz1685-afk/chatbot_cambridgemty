@@ -1202,212 +1202,105 @@ export class InnovatAgent {
       // PASO 2: Seleccionar formato de ficha (mes correspondiente)
       console.log(`[InnovatAgent] Paso 2: Seleccionando formato de ficha (${conceptoId})...`);
       const mes = conceptoId ? this.extraerMes(conceptoId) : 'Abril';
+      console.log(`[InnovatAgent] Mes a buscar en formato: "${mes}"`);
 
-      console.log(`[InnovatAgent] Buscando la caja de Formato (abajo de alumno)...`);
+      // ── ESTRATEGIA PRINCIPAL: Usar el <select> nativo que Select2 envuelve ──
+      // Select2 siempre tiene un <select> oculto debajo. Identificamos cuál de los selects
+      // tiene opciones que contienen el mes buscado → ese es el de Formato.
+      const formatoSeleccionado = await page.evaluate((mesParam) => {
+          const mesLower = mesParam.toLowerCase();
+          const selects = Array.from(document.querySelectorAll('select'));
 
-      // Estrategia para encontrar el dropdown de Formato usando la etiqueta "Formato" como ancla
-      // La página tiene esta estructura:
-      //   Fila 1: [label:Alumno] [select2:nombre alumno]
-      //   Fila 2: [select2:FORMATO] [select2:Matrícula/Apellido] [radios] [checkboxes] [btn GENERAR]
-      // El dropdown de Formato es el PRIMERO de la fila 2 — está junto a la etiqueta "Formato" o es el único vacío
-      const clickLogradoFormato = await page.evaluate(() => {
-          const selectsVisibles = Array.from(document.querySelectorAll('.select2-container'))
-                                     .filter(c => (c as HTMLElement).offsetParent !== null);
-
-          // ESTRATEGIA 1: Buscar el select2 que está justo después de una etiqueta "Formato"
-          const labels = Array.from(document.querySelectorAll('label, span, td, th'));
-          for (const label of labels) {
-              const txt = label.textContent?.trim().toLowerCase() || '';
-              const isVisible = (label as HTMLElement).offsetParent !== null;
-              if (!isVisible || !txt.includes('formato')) continue;
-
-              // Buscar el select2 más cercano al label
-              let sibling = label.nextElementSibling;
-              while (sibling) {
-                  if (sibling.classList.contains('select2-container') || sibling.querySelector('.select2-container')) {
-                      const container = sibling.classList.contains('select2-container') 
-                          ? sibling 
-                          : sibling.querySelector('.select2-container')!;
-                      const choice = container.querySelector('.select2-choice') || container.querySelector('.select2-selection');
-                      if (choice) {
-                          const idTemp = 'formato-' + Date.now();
-                          (choice as HTMLElement).id = (choice as HTMLElement).id || idTemp;
-                          return '#' + (choice as HTMLElement).id;
-                      }
-                  }
-                  sibling = sibling.nextElementSibling;
-              }
-
-              // Buscar en el padre
-              const parent = label.parentElement;
-              if (parent) {
-                  const container = parent.querySelector('.select2-container');
-                  if (container) {
-                      const choice = container.querySelector('.select2-choice') || container.querySelector('.select2-selection');
-                      if (choice) {
-                          const idTemp = 'formato-' + Date.now();
-                          (choice as HTMLElement).id = (choice as HTMLElement).id || idTemp;
-                          return '#' + (choice as HTMLElement).id;
-                      }
-                  }
+          for (const sel of selects) {
+              const options = Array.from(sel.options);
+              const match = options.find(o => o.text.toLowerCase().includes(mesLower));
+              if (match) {
+                  // Asignar el valor y disparar change para que Select2 se sincronice
+                  sel.value = match.value;
+                  sel.dispatchEvent(new Event('change', { bubbles: true }));
+                  console.log(`Formato seleccionado vía select nativo: "${match.text}" (value=${match.value})`);
+                  return match.text;
               }
           }
-
-          // ESTRATEGIA 2: El dropdown de Formato es el que tiene valor vacío o "Seleccionar"
-          // El de Alumno ya tiene un nombre largo seleccionado, el de Matrícula dice "Matrícula" o "Apellido"
-          // Por eliminación, el VACÍO o con texto corto que NO sea nombre de alumno es el Formato
-          const candidatos = selectsVisibles.filter(c => {
-              const txt = (c.textContent || '').trim().toLowerCase();
-              const esAlumno = txt.length > 30; // Nombres de alumnos son largos
-              const esFiltro = txt.includes('matrícula') || txt.includes('matricula') || 
-                               txt.includes('apellido') || txt.includes('nombre') ||
-                               txt.includes('activo') || txt.includes('inactivo');
-              return !esAlumno && !esFiltro;
-          });
-
-          if (candidatos.length > 0) {
-              // Tomar el primero que quede (debería ser el de Formato)
-              const container = candidatos[0];
-              const choice = container.querySelector('.select2-choice') || container.querySelector('.select2-selection');
-              if (choice) {
-                  const idTemp = 'formato-' + Date.now();
-                  (choice as HTMLElement).id = (choice as HTMLElement).id || idTemp;
-                  return '#' + (choice as HTMLElement).id;
-              }
-          }
-
-          // ESTRATEGIA 3 (último recurso): El segundo select2 visible de la página
-          // Orden típico: [0]=Alumno, [1]=Formato, [2]=Matrícula
-          if (selectsVisibles.length >= 2) {
-              const container = selectsVisibles[1];
-              const choice = container.querySelector('.select2-choice') || container.querySelector('.select2-selection');
-              if (choice) {
-                  const idTemp = 'formato-' + Date.now();
-                  (choice as HTMLElement).id = (choice as HTMLElement).id || idTemp;
-                  return '#' + (choice as HTMLElement).id;
-              }
-          }
-
           return null;
-      });
+      }, mes);
 
-      if (clickLogradoFormato) {
-          console.log(`[InnovatAgent] Abriendo caja de formato con Playwright Native Click en ${clickLogradoFormato}...`);
-          try {
-              // Hacemos el click NATIVO DEL NAVEGADOR con Playwright. Esto ASEGURA EL FOCO.
-              await page.locator(clickLogradoFormato).click({ force: true });
-          } catch(e) {
-              console.log(`[InnovatAgent] Falló el click de Playwright, reintentando...`);
-          }
-          await this.browser.wait(600); // Esperar animación del menú desplegable
+      if (formatoSeleccionado) {
+          console.log(`[InnovatAgent] ✅ Formato asignado en select nativo: "${formatoSeleccionado}"`);
+          await this.browser.wait(600); // Dar tiempo a Select2 para reflejar el cambio visualmente
+      } else {
+          // ── ESTRATEGIA FALLBACK: Abrir el wrapper Select2 de Formato y hacer click en la opción ──
+          console.warn(`[InnovatAgent] ⚠️ Select nativo no encontró el mes "${mes}". Intentando via UI...`);
 
-          console.log(`[InnovatAgent] Buscando literalmente la opción correcta en la lista desplegable...`);
-          
-          console.log(`[InnovatAgent] Buscando literalmente la opción correcta en la lista desplegable mediante JS...`);
-          
-          // ESTRATEGIA 1: Escribir en el input de búsqueda de Select2 para filtrar opciones
-          console.log(`[InnovatAgent] Escribiendo '${mes}' en el campo de búsqueda de Select2...`);
-          const inputSelect2 = page.locator('.select2-input:visible, .select2-search__field:visible, .select2-search input:visible').first();
-          try {
-              if (await inputSelect2.isVisible({ timeout: 1500 })) {
-                  await inputSelect2.fill('');
-                  await inputSelect2.type(mes, { delay: 100 });
-              } else {
-                  await page.keyboard.type(mes, { delay: 100 });
-              }
-          } catch(e) {
-              await page.keyboard.type(mes, { delay: 100 });
-          }
-
-          // ESPERA DINÁMICA PARA FORMATO
-          const candidateLocator = page.locator('.select2-results li, .select2-result-label, .select2-result').filter({ hasText: new RegExp(mes, 'i') }).first();
-          await candidateLocator.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
-
-          const clickedOption = await page.evaluate((mesParams) => {
-              const mesLower = mesParams.toLowerCase().trim();
-              const parts = mesLower.split(' ').filter(p => p.length > 0);
-
-              // Buscar en todos los nodos típicos de un dropdown (Select2 v3, v4 o UIkit)
-              const allCandidates = Array.from(document.querySelectorAll(
-                  '.select2-results li, .select2-results__option, .select2-result-label, ' +
-                  '.select2-result, .select2-results__option--highlighted, .uk-dropdown li'
-              ));
-
-              // Filtrar opciones que NO sean "no results" / loading
-              const validOptions = allCandidates.filter(el => {
-                  const cls = (el as HTMLElement).className || '';
-                  return !cls.includes('no-results') && !cls.includes('loading') && !cls.includes('disabled');
-              });
-
-              // MATCH 1: Todas las palabras de la búsqueda están presentes (más flexible)
-              let matches = validOptions.filter(el => {
-                  const txt = (el.textContent || '').toLowerCase();
-                  return parts.every(p => txt.includes(p));
-              });
-
-              // MATCH 2 (fallback): Al menos la primera palabra coincide
-              if (matches.length === 0) {
-                  matches = validOptions.filter(el => {
-                      const txt = (el.textContent || '').toLowerCase();
-                      return txt.includes(parts[0]);
+          // Encontrar qué <select> tiene al menos alguna opción que no sea vacía ni sea de alumno
+          // Los selects de alumno tienen opciones con nombres largos. El de Formato tiene meses.
+          const formatoContainerId = await page.evaluate(() => {
+              const selects = Array.from(document.querySelectorAll('select'));
+              for (const sel of selects) {
+                  const opts = Array.from(sel.options).filter(o => o.value && o.value !== '');
+                  // El select de formato tendrá opciones como "Enero", "Febrero", "Mensualidad", etc.
+                  const looksLikeFormat = opts.some(o => {
+                      const t = o.text.toLowerCase();
+                      return t.includes('mensual') || t.includes('enero') || t.includes('febrero') ||
+                             t.includes('marzo') || t.includes('abril') || t.includes('mayo') ||
+                             t.includes('junio') || t.includes('julio') || t.includes('agosto') ||
+                             t.includes('septiembre') || t.includes('octubre') || t.includes('noviembre') ||
+                             t.includes('diciembre') || t.includes('ficha') || t.includes('pago');
                   });
-              }
-
-              if (matches.length > 0) {
-                  const target = matches[0] as HTMLElement;
-                  target.scrollIntoView({ block: 'center' });
-                  target.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
-                  target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-                  target.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true, cancelable: true, view: window }));
-                  target.click();
-                  return `clicked:${target.textContent?.trim()}`;
+                  if (looksLikeFormat) {
+                      return sel.id || sel.name || null;
+                  }
               }
               return null;
-          }, mes);
+          });
 
-          if (clickedOption) {
-              console.log(`[InnovatAgent] ✅ Opción de formato seleccionada vía JS: ${clickedOption}`);
-          } else {
-              // ESTRATEGIA 2: Si JS no encontró nada, intentar con Playwright locator (más confiable para opciones visibles)
-              console.warn(`[InnovatAgent] ⚠️ JS no encontró la opción. Intentando con Playwright locator...`);
-              const partes = mes.toLowerCase().split(' ');
-              let optionLocator = page.locator('.select2-results li:visible, .select2-results__option:visible').filter({ hasText: new RegExp(partes[0], 'i') }).first();
-              
-              if (await optionLocator.isVisible({ timeout: 2000 }).catch(() => false)) {
-                  await optionLocator.click({ force: true });
-                  console.log(`[InnovatAgent] ✅ Opción clickeada con Playwright locator`);
-              } else {
-                  // ESTRATEGIA 3: Usar directamente el <select> nativo oculto que Select2 envuelve
-                  console.warn(`[InnovatAgent] ⚠️ Locator falló. Intentando selectOption() en el <select> nativo oculto...`);
-                  const nativeSelect = page.locator('select').filter({ has: page.locator(`option`) }).nth(1);
-                  try {
-                      await nativeSelect.selectOption({ label: new RegExp(mes, 'i') as any });
-                      // Disparar evento change para que Select2 se entere del cambio
-                      await nativeSelect.evaluate(sel => {
-                          sel.dispatchEvent(new Event('change', { bubbles: true }));
-                      });
-                      console.log(`[InnovatAgent] ✅ Opción seleccionada en <select> nativo`);
-                  } catch(e) {
-                      // ESTRATEGIA 4 (último recurso): Enter sobre lo que haya filtrado
-                      console.warn(`[InnovatAgent] ⚠️ selectOption falló. Presionando Enter como último recurso...`);
-                      await page.keyboard.press('Enter');
-                  }
+          if (formatoContainerId) {
+              // Usar el select2 que corresponde a ese select nativo
+              const select2Wrapper = page.locator(`#s2id_${formatoContainerId} .select2-choice, [data-select2-id="${formatoContainerId}"]`).first();
+              if (await select2Wrapper.isVisible({ timeout: 2000 }).catch(() => false)) {
+                  await select2Wrapper.click({ force: true });
+                  await this.browser.wait(600);
               }
+          } else {
+              // Último recurso: abrir el primer select2 visible que no sea el de alumno
+              await page.evaluate(() => {
+                  const containers = Array.from(document.querySelectorAll('.select2-container'))
+                      .filter(c => (c as HTMLElement).offsetParent !== null);
+                  // Saltamos el 0 = Alumno (tiene nombre largo seleccionado)
+                  // Buscamos el que tiene texto vacío o corto (es el de Formato)
+                  const formato = containers.find(c => {
+                      const txt = (c.querySelector('.select2-chosen') as HTMLElement)?.innerText?.trim() || '';
+                      return txt === '' || txt.length < 15;
+                  });
+                  if (formato) {
+                      const choice = formato.querySelector('.select2-choice') as HTMLElement;
+                      if (choice) choice.click();
+                  }
+              });
+              await this.browser.wait(600);
           }
 
-          // Esperar que Select2 asimile la selección
-          await this.browser.wait(400);
-      } else {
-          console.warn(`[InnovatAgent] ⚠️ No se pudo clickear la caja de formato por JS. Aplicando tecla Tab de respaldo...`);
-          await page.keyboard.press('Tab');
-          await this.browser.wait(400);
-          await page.keyboard.type(mes, { delay: 150 });
-          await this.browser.wait(3500);
-          console.log(`[InnovatAgent] Confirmando con Enter...`);
-          await page.keyboard.press('Enter');
-      }
+          // Escribir el mes en el campo de búsqueda del dropdown abierto
+          const inputSelect2 = page.locator('.select2-input:visible, .select2-search__field:visible').first();
+          if (await inputSelect2.isVisible({ timeout: 1500 }).catch(() => false)) {
+              await inputSelect2.fill('');
+              await inputSelect2.type(mes, { delay: 100 });
+          } else {
+              await page.keyboard.type(mes, { delay: 100 });
+          }
+          await this.browser.wait(1500);
 
-      console.log(`[InnovatAgent] Confirmando asimilación del mes...`);
+          // Click en la opción que aparezca
+          const optionFallback = page.locator('.select2-results li, .select2-results__option')
+              .filter({ hasText: new RegExp(mes, 'i') }).first();
+          if (await optionFallback.isVisible({ timeout: 2000 }).catch(() => false)) {
+              await optionFallback.click({ force: true });
+              console.log(`[InnovatAgent] ✅ Formato seleccionado vía UI fallback`);
+          } else {
+              await page.keyboard.press('Enter');
+              console.warn(`[InnovatAgent] ⚠️ Formato: presionando Enter como último recurso`);
+          }
+      }
       await this.browser.wait(400);
 
       // PASO 4: Activar checkbox "Tomar en cuenta para recargos"

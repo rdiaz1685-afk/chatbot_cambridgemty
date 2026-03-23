@@ -1059,8 +1059,11 @@ export class InnovatAgent {
       }
     }
     if (!mesEncontrado) {
-      console.warn(`[InnovatAgent] ⚠️ No se encontró mes en: "${concepto}". Fallback → Abril`);
-      mesEncontrado = 'Abril';
+      // Usar el mes actual del sistema como default (no "Abril" fijo)
+      const mesesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                            'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      mesEncontrado = mesesNombres[new Date().getMonth()];
+      console.warn(`[InnovatAgent] ⚠️ No se encontró mes en: "${concepto}". Usando mes actual: ${mesEncontrado}`);
     }
 
     // ─── 3. ESTANCIA LARGA (antes que estancia simple para evitar match parcial) ─────────────────────────
@@ -1266,9 +1269,13 @@ export class InnovatAgent {
               const t = o.text.toLowerCase();
               return tipo ? t.includes(tipo) && (mesK ? t.includes(mesK) : true) : false;
           });
-          // Intento 2: solo tipo de concepto
+          // Intento 2: solo tipo de concepto, EXCLUYENDO opciones anuales
+          // Ej: "estancia" → encuentra "Estancia Marzo" pero NO "Estancia Anual"
           if (!match && tipo) {
-              match = options.find(o => o.text.toLowerCase().includes(tipo));
+              match = options.find(o => {
+                  const t = o.text.toLowerCase();
+                  return t.includes(tipo) && !t.includes('anual') && !t.includes('anualidad');
+              });
           }
           // Intento 3: solo mes
           if (!match && mesK) {

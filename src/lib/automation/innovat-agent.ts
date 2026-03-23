@@ -1261,10 +1261,10 @@ export class InnovatAgent {
 
           const options = Array.from((formatSelect as HTMLSelectElement).options);
 
-          // Intento 1: tipo + mes
+          // Intento 1: tipo + mes (ambas palabras clave presentes)
           let match = options.find(o => {
               const t = o.text.toLowerCase();
-              return tipo && mes && t.includes(tipo) && t.includes(mesK);
+              return tipo ? t.includes(tipo) && (mesK ? t.includes(mesK) : true) : false;
           });
           // Intento 2: solo tipo de concepto
           if (!match && tipo) {
@@ -1277,7 +1277,13 @@ export class InnovatAgent {
 
           if (match) {
               (formatSelect as HTMLSelectElement).value = match.value;
+              // Disparar change para el select nativo
               formatSelect.dispatchEvent(new Event('change', { bubbles: true }));
+              // Notificar a Select2 mediante jQuery (v3 usa esto para reflejar el cambio en la UI)
+              try {
+                  const jq = (window as any).jQuery || (window as any).$;
+                  if (jq) jq(formatSelect).trigger('change');
+              } catch(e) { /* jQuery no disponible, ok */ }
               console.log(`[Innovat] ✅ Formato: "${match.text}" (val=${match.value})`);
               return match.text;
           }
@@ -1342,13 +1348,18 @@ export class InnovatAgent {
               await this.browser.wait(600);
           }
 
-          // Escribir el mes en el campo de búsqueda del dropdown abierto
+          // Escribir SOLO el tipo de concepto en el campo de búsqueda (no la cadena completa)
+          // Innovat tiene opciones como "Estancia Marzo", "Clases Extrac-Marzo", etc.
+          // Buscar por la primera palabra del tipo es más confiable que la cadena completa.
+          // Ej: mes="Estancia Larga-Marzo" → buscar solo "Estancia" (primera palabra)
+          const tipoParaBuscar = mes.split(/[-\s]/)[0]; // "Estancia", "Clases", "Colegiatura", etc.
+          console.log(`[InnovatAgent] Buscando en UI de Select2: "${tipoParaBuscar}"`);
           const inputSelect2 = page.locator('.select2-input:visible, .select2-search__field:visible').first();
           if (await inputSelect2.isVisible({ timeout: 1500 }).catch(() => false)) {
               await inputSelect2.fill('');
-              await inputSelect2.type(mes, { delay: 100 });
+              await inputSelect2.type(tipoParaBuscar, { delay: 100 });
           } else {
-              await page.keyboard.type(mes, { delay: 100 });
+              await page.keyboard.type(tipoParaBuscar, { delay: 100 });
           }
           await this.browser.wait(1500);
 

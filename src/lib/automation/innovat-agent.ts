@@ -1277,70 +1277,45 @@ export class InnovatAgent {
           console.log(`[InnovatAgent] Mejor opción hallada: "${bestOption?.text}" (val=${bestOption?.value})`);
 
           if (bestOption) {
-              // ── Paso 2C: Abrir el dropdown Select2 y hacer click en la opción ──
-              // El wrapper Select2 para un select con id="X" es "#s2id_X"
-              const wrapperId = selId ? `#s2id_${selId}` : null;
-              let select2Opened = false;
+              // Paso 2C: Abrir dropdown con jQuery select2('open') y click nativo
+              await page.evaluate((sId: string) => {
+                  try {
+                      const jq = (window as any).$ || (window as any).jQuery;
+                      if (jq && sId) jq('#' + sId).select2('open');
+                  } catch(e) { /* ignore */ }
+              }, selId);
+              await this.browser.wait(700);
 
-              if (wrapperId) {
-                  const choiceBtn = page.locator(`${wrapperId} .select2-choice, ${wrapperId} .select2-selection`).first();
-                  if (await choiceBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-                      await choiceBtn.click({ force: true });
-                      await this.browser.wait(700);
-                      select2Opened = true;
-                      console.log(`[InnovatAgent] Dropdown de formato abierto via ${wrapperId}`);
+              // Paso 2D: Click Playwright nativo en la opcion correcta (excluye anual)
+              const resultItems = page.locator('.select2-results li, .select2-results__option');
+              const itemCount = await resultItems.count().catch(() => 0);
+              console.log('[InnovatAgent] Opciones en dropdown: ' + itemCount);
+              let fmtClicked = false;
+
+              for (let ii = 0; ii < itemCount; ii++) {
+                  const item = resultItems.nth(ii);
+                  const txt = ((await item.textContent().catch(() => '')) || '').toLowerCase();
+                  const correcto = (mesConcepto ? txt.includes(mesConcepto) : true)
+                                 && !txt.includes('anual');
+                  console.log('[InnovatAgent] opcion[' + ii + ']: "' + txt + '" correcto=' + correcto);
+                  if (correcto) {
+                      await item.click({ force: true });
+                      await this.browser.wait(400);
+                      console.log('[InnovatAgent] ✅ Formato click: "' + txt + '"');
+                      fmtClicked = true;
+                      break;
                   }
               }
 
-              if (!select2Opened) {
-                  // Fallback: abrir Select2 usando jQuery API directamente
-                  await page.evaluate((sId) => {
+              if (!fmtClicked) {
+                  await page.keyboard.press('Escape');
+                  await this.browser.wait(300);
+                  console.warn('[InnovatAgent] ⚠️ jQuery val fallback: ' + bestOption.value);
+                  await page.evaluate(({ sId, val }) => {
                       const jq = (window as any).$ || (window as any).jQuery;
-                      if (jq && sId) {
-                          jq('#' + sId).select2('open');
-                      } else {
-                          // Último recurso: click en el segundo .select2-choice visible
-                          const choices = Array.from(document.querySelectorAll('.select2-choice'))
-                              .filter(c => (c as HTMLElement).offsetParent !== null);
-                          // El primero tiene el nombre del alumno (largo), el segundo es Formato
-                          const fmt = choices.find(c => {
-                              const txt = (c.querySelector('.select2-chosen') as HTMLElement)?.innerText?.trim() || '';
-                              return txt.length < 20; // Formato tiene texto corto
-                          });
-                          if (fmt) (fmt as HTMLElement).click();
-                      }
-                  }, selId);
-                  await this.browser.wait(700);
-              }
-
-              // ── Paso 2D: Buscar y hacer click en la opción correcta en el dropdown abierto ──
-              // Buscar la opción por texto exacto o parcial, sin "anual"
-              const escapedText = bestOption.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              const optLocator = page.locator('.select2-results li, .select2-results__option')
-                  .filter({ hasText: new RegExp(escapedText, 'i') })
-                  .first();
-
-              if (await optLocator.isVisible({ timeout: 2500 }).catch(() => false)) {
-                  await optLocator.evaluate(el => {
-                      el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-                      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-                      el.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true }));
-                      (el as HTMLElement).click();
-                  });
-                  await this.browser.wait(500);
-                  console.log(`[InnovatAgent] ✅ Formato seleccionado via UI: "${bestOption.text}"`);
-              } else {
-                  // Fallback: usar jQuery select2 val directamente
-                  const jqResult = await page.evaluate(({ sId, val }: { sId: string, val: string }) => {
-                      const jq = (window as any).$ || (window as any).jQuery;
-                      if (jq && sId) {
-                          jq('#' + sId).val(val).trigger('change');
-                          return true;
-                      }
-                      return false;
+                      if (jq && sId) jq('#' + sId).val(val).trigger('change');
                   }, { sId: selId, val: bestOption.value });
-                  console.log(`[InnovatAgent] ${jqResult ? '✅' : '⚠️'} Formato via jQuery val: ${bestOption.value}`);
-                  await this.browser.wait(500);
+                  await this.browser.wait(400);
               }
           } else {
               console.warn(`[InnovatAgent] ⚠️ No se encontró opción de formato para: "${mes}"`);

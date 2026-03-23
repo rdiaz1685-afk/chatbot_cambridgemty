@@ -1206,7 +1206,19 @@ export class InnovatAgent {
           await page.keyboard.press('Tab'); // A veces un Tab asimila la selección
       }
 
-      await this.browser.wait(1000);
+      // Esperar a que Innovat cargue las opciones del formato via AJAX (despues de seleccionar alumno)
+      console.log('[InnovatAgent] Esperando carga de opciones de formato via AJAX...');
+      const FKEYS_WAIT = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+          'septiembre','octubre','noviembre','diciembre','estancia','clases','colegiatura',
+          'mensual','extrac','inscripci','reinscripci','uniforme','pintura','natacion'];
+      const fmtOptionsLoaded = await page.waitForFunction((keys) => {
+          return Array.from(document.querySelectorAll('select')).some(s => {
+              const valid = Array.from(s.options).filter(o => o.value);
+              return valid.filter(o => keys.some(k => o.text.toLowerCase().includes(k))).length >= 2;
+          });
+      }, FKEYS_WAIT, { timeout: 12000 }).then(() => true).catch(() => false);
+      console.log('[InnovatAgent] formato opciones cargadas: ' + fmtOptionsLoaded);
+      await this.browser.wait(500); // Dar tiempo a Select2 para inicializarse
 
       // PASO 2: Seleccionar formato de ficha
       console.log('[InnovatAgent] Paso 2: Seleccionando formato (' + conceptoId + ')...');

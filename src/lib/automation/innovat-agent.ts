@@ -1224,38 +1224,66 @@ export class InnovatAgent {
       // Select2 siempre tiene un <select> oculto debajo. Identificamos cuál de los selects
       // tiene opciones que contienen el tipo de concepto + mes buscados.
       //
-      // Para buscar, descomponemos el formato en palabras clave:
-      // Ej: "Estancia Larga-Abril" → keywords=["estancia","larga","abril"]
-      // Ej: "Clases Extrac-Marzo"  → keywords=["clases","extrac","marzo"]
-      // y buscamos la opción cuyo texto incluya TODAS las palabras clave.
-      // Si no hay match completo, buscamos la que incluya al menos la primera palabra.
+      // La estrategia es: (1) identificar cuál <select> es el de Formato (no el de Alumno)
+      // y (2) dentro de ese select, encontrar la opción correcta por tipo de concepto + mes.
       const formatoSeleccionado = await page.evaluate((mesParam) => {
-          const normalized = mesParam.toLowerCase().replace(/-/g, ' ');
-          const keywords = normalized.split(/[\s,]+/).filter(k => k.length > 2);
+          // PASO A: Identificar cuál <select> es el de FORMATO
+          // El de formato tiene opciones con meses o tipos de pago (no nombres de personas)
+          const FORMAT_KEYWORDS = [
+              'enero','febrero','marzo','abril','mayo','junio',
+              'julio','agosto','septiembre','octubre','noviembre','diciembre',
+              'mensual','ficha','pago','anualid','inscripci',
+              'estancia','extrac','clases','uniforme','material','reinscripci'
+          ];
           const selects = Array.from(document.querySelectorAll('select'));
+          const formatSelect = selects.find(sel => {
+              const opts = Array.from(sel.options).filter(o => o.value && o.value !== '');
+              const matches = opts.filter(o => FORMAT_KEYWORDS.some(k => o.text.toLowerCase().includes(k)));
+              return matches.length >= 2;
+          });
 
-          const tryMatch = (opts: HTMLOptionsCollection, kws: string[]) => {
-              // Intento 1: todas las palabras clave presentes
-              let match = Array.from(opts).find(o => {
-                  const t = o.text.toLowerCase();
-                  return kws.every(k => t.includes(k));
-              });
-              // Intento 2: al menos la primera keyword (tipo de concepto)
-              if (!match) {
-                  match = Array.from(opts).find(o => o.text.toLowerCase().includes(kws[0]));
-              }
-              return match || null;
-          };
-
-          for (const sel of selects) {
-              const match = tryMatch(sel.options, keywords);
-              if (match) {
-                  sel.value = match.value;
-                  sel.dispatchEvent(new Event('change', { bubbles: true }));
-                  console.log(`Formato seleccionado vía select nativo: "${match.text}" (value=${match.value})`);
-                  return match.text;
-              }
+          if (!formatSelect) {
+              console.log('[Innovat] No se encontró el select de formato');
+              return null;
           }
+
+          // PASO B: Limpiar el parámetro — remover paréntesis y su contenido, dejar solo letras
+          // "Estancia Larga-Marzo" → tipo="estancia", mes="marzo"
+          // "Estancia Larga (5 dias)-Marzo" → mismo resultado
+          const cleaned = mesParam.toLowerCase()
+              .replace(/\([^)]*\)/g, ' ')  // quitar (5 dias), (1), etc.
+              .replace(/-/g, ' ')
+              .replace(/[^a-záéíóúüñ\s]/g, ' ');
+          const parts = cleaned.split(/\s+/).filter(k => k.length > 2);
+          const tipo = parts[0] || ''; // tipo de concepto: estancia, clases, colegiatura...
+          const mesK = parts[parts.length - 1] || ''; // mes: marzo, abril...
+          console.log(`[Innovat] Buscando formato: tipo="${tipo}" mes="${mesK}" en select id=${(formatSelect as HTMLSelectElement).id}`);
+
+          const options = Array.from((formatSelect as HTMLSelectElement).options);
+
+          // Intento 1: tipo + mes
+          let match = options.find(o => {
+              const t = o.text.toLowerCase();
+              return tipo && mes && t.includes(tipo) && t.includes(mesK);
+          });
+          // Intento 2: solo tipo de concepto
+          if (!match && tipo) {
+              match = options.find(o => o.text.toLowerCase().includes(tipo));
+          }
+          // Intento 3: solo mes
+          if (!match && mesK) {
+              match = options.find(o => o.text.toLowerCase().includes(mesK));
+          }
+
+          if (match) {
+              (formatSelect as HTMLSelectElement).value = match.value;
+              formatSelect.dispatchEvent(new Event('change', { bubbles: true }));
+              console.log(`[Innovat] ✅ Formato: "${match.text}" (val=${match.value})`);
+              return match.text;
+          }
+
+          const available = options.map(o => o.text).join(' | ');
+          console.log(`[Innovat] ⚠️ No se encontró opción. Disponibles: ${available}`);
           return null;
       }, mes);
 

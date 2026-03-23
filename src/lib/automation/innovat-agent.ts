@@ -1063,7 +1063,13 @@ export class InnovatAgent {
       mesEncontrado = 'Abril';
     }
 
-    // ─── 3. ESTANCIA (10 meses: agosto–mayo) ─────────────────────────────────
+    // ─── 3. ESTANCIA LARGA (antes que estancia simple para evitar match parcial) ─────────────────────────
+    if (lower.includes('estancia') && (lower.includes('larga') || lower.includes('extendida'))) {
+      console.log(`[InnovatAgent] Concepto estancia larga → "Estancia Larga-${mesEncontrado}"`);
+      return `Estancia Larga-${mesEncontrado}`;
+    }
+
+    // ─── 3b. ESTANCIA (normal, 10 meses: agosto–mayo) ─────────────────────────────────
     if (lower.includes('estancia')) {
       console.log(`[InnovatAgent] Concepto estancia → "Estancia-${mesEncontrado}"`);
       return `Estancia-${mesEncontrado}`;
@@ -1204,18 +1210,46 @@ export class InnovatAgent {
       const mes = conceptoId ? this.extraerMes(conceptoId) : 'Abril';
       console.log(`[InnovatAgent] Mes a buscar en formato: "${mes}"`);
 
+      // ── DIAGNÓSTICO: imprimir todas las opciones de cada <select> para ver nombres exactos de Innovat ──
+      const allSelectOptions = await page.evaluate(() => {
+          return Array.from(document.querySelectorAll('select')).map((sel, i) => ({
+              index: i,
+              id: sel.id || sel.name || `(sin id)`,
+              options: Array.from(sel.options).map(o => `"${o.text}" [val=${o.value}]`).join(', ')
+          }));
+      });
+      console.log(`[InnovatAgent] 🔍 Selects en página de fichas:`, JSON.stringify(allSelectOptions, null, 2));
+
       // ── ESTRATEGIA PRINCIPAL: Usar el <select> nativo que Select2 envuelve ──
       // Select2 siempre tiene un <select> oculto debajo. Identificamos cuál de los selects
-      // tiene opciones que contienen el mes buscado → ese es el de Formato.
+      // tiene opciones que contienen el tipo de concepto + mes buscados.
+      //
+      // Para buscar, descomponemos el formato en palabras clave:
+      // Ej: "Estancia Larga-Abril" → keywords=["estancia","larga","abril"]
+      // Ej: "Clases Extrac-Marzo"  → keywords=["clases","extrac","marzo"]
+      // y buscamos la opción cuyo texto incluya TODAS las palabras clave.
+      // Si no hay match completo, buscamos la que incluya al menos la primera palabra.
       const formatoSeleccionado = await page.evaluate((mesParam) => {
-          const mesLower = mesParam.toLowerCase();
+          const normalized = mesParam.toLowerCase().replace(/-/g, ' ');
+          const keywords = normalized.split(/[\s,]+/).filter(k => k.length > 2);
           const selects = Array.from(document.querySelectorAll('select'));
 
+          const tryMatch = (opts: HTMLOptionsCollection, kws: string[]) => {
+              // Intento 1: todas las palabras clave presentes
+              let match = Array.from(opts).find(o => {
+                  const t = o.text.toLowerCase();
+                  return kws.every(k => t.includes(k));
+              });
+              // Intento 2: al menos la primera keyword (tipo de concepto)
+              if (!match) {
+                  match = Array.from(opts).find(o => o.text.toLowerCase().includes(kws[0]));
+              }
+              return match || null;
+          };
+
           for (const sel of selects) {
-              const options = Array.from(sel.options);
-              const match = options.find(o => o.text.toLowerCase().includes(mesLower));
+              const match = tryMatch(sel.options, keywords);
               if (match) {
-                  // Asignar el valor y disparar change para que Select2 se sincronice
                   sel.value = match.value;
                   sel.dispatchEvent(new Event('change', { bubbles: true }));
                   console.log(`Formato seleccionado vía select nativo: "${match.text}" (value=${match.value})`);

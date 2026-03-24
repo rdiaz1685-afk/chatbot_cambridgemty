@@ -19,7 +19,8 @@ import {
   GraduationCap,
   Handshake,
   Paperclip,
-  Share2
+  Share2,
+  Home
 } from 'lucide-react'
 import type { Message, ChatAction, QuickAction } from '@/types/chat'
 
@@ -94,6 +95,18 @@ export default function ChatPage() {
   // Focus input
   useEffect(() => {
     inputRef.current?.focus()
+  }, [])
+
+  // Volver al inicio (Home)
+  const resetChat = useCallback(() => {
+    const welcomeMessage: Message = {
+      id: `welcome-${Date.now()}`,
+      role: 'assistant',
+      content: '🏠 **Menú Principal**\n\nHe reiniciado nuestra conversación. ¿En qué trámite te puedo ayudar ahora?',
+      timestamp: new Date(),
+    }
+    setMessages([welcomeMessage])
+    setAlumnoVerificado(null) // Para que vuelva a pedir CURP o datos si es necesario en un flujo nuevo
   }, [])
 
   // Send message to API
@@ -339,19 +352,30 @@ export default function ChatPage() {
         {/* Header */}
         <Card className="shrink-0 shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
           <CardHeader className="py-3 px-4">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Avatar className="h-10 w-10 border-2 border-primary/20">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    <Bot className="h-5 w-5" />
-                  </AvatarFallback>
-                </Avatar>
-                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-slate-900" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Avatar className="h-10 w-10 border-2 border-primary/20">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      <Bot className="h-5 w-5" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-slate-900" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Asistente Virtual</CardTitle>
+                  <p className="text-xs text-muted-foreground">Colegio Cambridge de Monterrey</p>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-lg">Asistente Virtual</CardTitle>
-                <p className="text-xs text-muted-foreground">Colegio Cambridge de Monterrey</p>
-              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={resetChat} 
+                className="rounded-full hover:bg-primary/20 text-primary dark:text-primary dark:hover:bg-primary/30 transition-colors"
+                title="Volver al menú principal"
+              >
+                <Home className="h-5 w-5" />
+              </Button>
             </div>
           </CardHeader>
         </Card>

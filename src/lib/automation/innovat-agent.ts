@@ -1255,14 +1255,13 @@ export class InnovatAgent {
           const uniqueCandidates = Array.from(new Set(candidates));
           const visible = uniqueCandidates.filter(c => (c as HTMLElement).offsetParent !== null);
           console.log('select2 candidates visible:', visible.length);
-          const fmtContainer = visible.find(c => {
-              // El de formato tiene texto vacio o muy corto (no el nombre del alumno)
-              const chosenText = (
-                  c.querySelector('.select2-chosen') as HTMLElement ||
-                  c.querySelector('.select2-selection__rendered') as HTMLElement
-              )?.innerText?.trim() || '';
-              return chosenText.length === 0 || chosenText.length < 10;
-          });
+          const fmtContainer = visible.find((c, idx) => {
+              // Ignoramos el primer Select2 si hay varios, asumiendo que es el de "Alumno".
+              if (idx === 0 && visible.length > 1) return false;
+              const text = (c as HTMLElement).innerText || '';
+              // El seleccionador de alumno suele tener la matrícula, ej "(6580)"
+              return !/\(\d+\)/.test(text);
+          }) || (visible.length > 1 ? visible[1] : visible[0]);
           if (fmtContainer) {
               const clickTarget = (
                   fmtContainer.querySelector('.select2-choice') ||

@@ -1266,8 +1266,11 @@ export class InnovatAgent {
               const clickTarget = (
                   fmtContainer.querySelector('.select2-choice') ||
                   fmtContainer.querySelector('.select2-selection') ||
-                  fmtContainer as HTMLElement
+                  fmtContainer
               ) as HTMLElement;
+              
+              clickTarget.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+              clickTarget.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
               clickTarget.click();
               return 'clicked:' + fmtContainer.className.substring(0, 40);
           }
@@ -1321,8 +1324,24 @@ export class InnovatAgent {
                   }
               }
 
+              if (!clicked && itemCount > 0) {
+                  console.log('[InnovatAgent] ⚠️ Ninguna coincidencia exacta. Ejecutando fallback: seleccionando la primera opción válida de la lista.');
+                  for (let ii = 0; ii < itemCount; ii++) {
+                      const item = resultItems.nth(ii);
+                      const txt = ((await item.textContent().catch(() => '')) || '').toLowerCase();
+                      // Evitamos la opción que dice "Seleccione..." o vacía
+                      if (txt.length > 3 && !txt.includes('seleccione') && !txt.includes('elegir')) {
+                          await item.click({ force: true });
+                          await this.browser.wait(400);
+                          console.log('[InnovatAgent] ✅ Formato click (fallback): "' + txt + '"');
+                          clicked = true;
+                          break;
+                      }
+                  }
+              }
+
               if (!clicked) {
-                  console.warn('[InnovatAgent] ⚠️ No se encontro opcion correcta, cerrando...');
+                  console.warn('[InnovatAgent] ⚠️ No se pudo elegir opción, cerrando dropdown...');
                   await page.keyboard.press('Escape');
                   await this.browser.wait(300);
               }
@@ -1343,10 +1362,15 @@ export class InnovatAgent {
               });
               console.log('[InnovatAgent] select[1] options after click:', JSON.stringify(s2Opts));
 
-              const bestV = s2Opts.find((o: { t: string; v: string }) => {
+              let bestV = s2Opts.find((o: { t: string; v: string }) => {
                   const t = o.t.toLowerCase();
                   return (mesK ? t.includes(mesK) : true) && !t.includes('anual');
               });
+
+              if (!bestV && s2Opts.length > 1) {
+                  console.log('[InnovatAgent] ⚠️ Native fallback fallback: eligiendo primer formato valido');
+                  bestV = s2Opts.find((o: { t: string; v: string }) => o.t.length > 3 && !o.t.toLowerCase().includes('selecc'));
+              }
               if (bestV) {
                   await page.evaluate(({ idx, val }: { idx: number; val: string }) => {
                       const sel = document.querySelectorAll('select')[idx] as HTMLSelectElement;

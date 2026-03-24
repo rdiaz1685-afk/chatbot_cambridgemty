@@ -817,6 +817,10 @@ export class InnovatAgent {
           // Ignorar filas de "Total" o vacías
           if (!descripcion || descripcion.toUpperCase().includes('TOTAL') || descripcion === 'Saldo') return;
 
+          // Ignorar complementos o recargos porque ya vienen dentro de la ficha de pago principal
+          const descUp = descripcion.toUpperCase();
+          if (descUp.includes('COMPL.') || descUp.includes('COMPLEMENTO')) return;
+
           const monto = parseFloat(importeStr.replace(/[^0-9.-]+/g, ""));
           if (isNaN(monto) || monto < 1) return;
 
@@ -983,7 +987,9 @@ export class InnovatAgent {
    * CONCEPTOS CON MES:
    *   Colegiatura → "Enero", "Febrero", ... "Diciembre"
    *   Clases Extracurriculares → "Clases Extrac-Enero" ... "Clases Extrac-Diciembre"
-   *   Estancia → "Estancia-Enero" ... "Estancia-Diciembre"  (10 meses: ago–may)
+   *   Estancia → "Estancia Septiembre" ... "Estancia Junio"  (10 meses: sep–jun)
+   *     NOTA: Cualquier variante (Estancia Larga, Estancia Corta, etc.) se mapea
+   *     siempre a "Estancia [Mes]" porque Innovat solo tiene esos 10 formatos.
    */
   private extraerMes(concepto: string): string {
     const lower = concepto.toLowerCase();
@@ -1066,16 +1072,12 @@ export class InnovatAgent {
       console.warn(`[InnovatAgent] ⚠️ No se encontró mes en: "${concepto}". Usando mes actual: ${mesEncontrado}`);
     }
 
-    // ─── 3. ESTANCIA LARGA (antes que estancia simple para evitar match parcial) ─────────────────────────
-    if (lower.includes('estancia') && (lower.includes('larga') || lower.includes('extendida'))) {
-      console.log(`[InnovatAgent] Concepto estancia larga → "Estancia Larga-${mesEncontrado}"`);
-      return `Estancia Larga-${mesEncontrado}`;
-    }
-
-    // ─── 3b. ESTANCIA (normal, 10 meses: agosto–mayo) ─────────────────────────────────
+    // ─── 3. ESTANCIA (cualquier variante: normal, larga, corta, etc.) ─────────────────────────────────────
+    // Innovat solo tiene 10 formatos: "Estancia Septiembre" hasta "Estancia Junio".
+    // Sin importar la variante del conceptoId, siempre se mapea a "Estancia [Mes]".
     if (lower.includes('estancia')) {
-      console.log(`[InnovatAgent] Concepto estancia → "Estancia-${mesEncontrado}"`);
-      return `Estancia-${mesEncontrado}`;
+      console.log(`[InnovatAgent] Concepto estancia → "Estancia ${mesEncontrado}" (formato único de Innovat)`);
+      return `Estancia ${mesEncontrado}`;
     }
 
     // ─── 4. CLASES EXTRACURRICULARES ──────────────────────────────────────────
@@ -1189,22 +1191,29 @@ export class InnovatAgent {
       
       let clickedStudent = false;
       if (await studentResult.isVisible().catch(() => false)) {
-          console.log(`[InnovatAgent] Alumno exacto encontrado en Select2, haciendo click...`);
-          // Select2 reacciona bien al mouseup o click
-          await studentResult.evaluate(el => {
-              el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-          }).catch(() => {});
+          console.log(`[InnovatAgent] Alumno exacto encontrado. Usando Hover + Clic + Enter + Tab...`);
+          // 1. Hover para decirle a Select2 "este es el que quiero" (lo resalta en azul)
+          await studentResult.hover({ force: true }).catch(() => {});
+          await this.browser.wait(200);
+          
+          // 2. Click nativo de Playwright
           await studentResult.click({ force: true }).catch(() => {});
           clickedStudent = true;
-          await this.browser.wait(400);
+          await this.browser.wait(300);
       }
 
-      if (!clickedStudent) {
-          console.log(`[InnovatAgent] Fallback a Enter si el match exacto falla...`);
-          await page.keyboard.press('Enter');
-          await this.browser.wait(600);
-          await page.keyboard.press('Tab'); // A veces un Tab asimila la selección
-      }
+      console.log(`[InnovatAgent] Enviando 'Enter' y 'Tab' (Tip de usuario) para asentar la selección...`);
+      // Si el hover lo resaltó, Enter lo selecciona. Tab mueve el foco al combo de formatos.
+      await page.keyboard.press('Enter');
+      await this.browser.wait(400);
+      await page.keyboard.press('Tab'); // CRÍTICO: el usuario indica que esto es la clave
+
+      console.log(`[InnovatAgent] Esperando asimilación de la selección...`);
+      await this.browser.wait(1500); // Dar instante para procesar la selección del alumno
+
+      console.log(`[InnovatAgent] Presionando FLECHA ABAJO para abrir y forzar la carga del combo de Formatos...`);
+      await page.keyboard.press('ArrowDown');
+      await this.browser.wait(1000); // Dando tiempo a que salga el recuadro de opciones
 
       // PASO 2: Seleccionar formato de ficha
       console.log('[InnovatAgent] Paso 2: Seleccionando formato (' + conceptoId + ')...');
@@ -1213,12 +1222,17 @@ export class InnovatAgent {
           return mList[new Date().getMonth()];
       })();
 
-      // Extraer tipo y mes
-      const mesClean2 = mes.toLowerCase().replace(/-/g, ' ').replace(/\([^)]*\)/g, '');
+      // Extraer tipo y mes del concepto mapeado
+      // Ejemplos: "Estancia Marzo" → tipoK="estancia", mesK="marzo"
+      //           "Clases Extrac-Marzo" → tipoK="clases", mesK="marzo"
+      //           "Marzo" (colegiatura) → tipoK="marzo", mesK="marzo"
+      const mesClean2 = mes.toLowerCase().replace(/-/g, ' ').replace(/\([^)]*\)/g, '').trim();
       const mesParts2 = mesClean2.split(/\s+/).filter((k: string) => k.length > 2);
       const tipoK = mesParts2[0] || '';
       const mesK  = mesParts2[mesParts2.length - 1] || '';
-      console.log('[InnovatAgent] tipo="' + tipoK + '" mes="' + mesK + '"');
+      // Es colegiatura pura cuando tipoK === mesK (ej: "marzo")
+      const esColegiaturaPura = tipoK === mesK;
+      console.log('[InnovatAgent] tipo="' + tipoK + '" mes="' + mesK + '" esColegiaturaPura=' + esColegiaturaPura);
 
       // DIAGNOSTICO extendido
       const diagInfo = await page.evaluate(() => {
@@ -1242,153 +1256,73 @@ export class InnovatAgent {
       // El dropdown de formato es el que tiene clase select2 y esta vacio (no tiene el nombre del alumno)
       // O es el segundo <select> en la pagina
 
-      // Paso A: Encontrar y clickear el dropdown de formato
-      let formatOpened = false;
+      // =========================================================
+      // =========================================================
+      // Paso A: Estrategia de Búsqueda Manual (Usuario/Teclado)
+      // =========================================================
+      
+      // 1. Escribir las 2 primeras letras del concepto (ej. 'es' para estancia, 'ma' para marzo)
+      // Esto pre-filtra la lista para que no sea tan larga.
+      const charsToType = mes.substring(0, 2).toLowerCase();
+      console.log(`[InnovatAgent] Ejecutando estrategia manual. Escribiendo '${charsToType}' en formato...`);
+      await page.keyboard.type(charsToType, { delay: 150 });
+      await this.browser.wait(1000); // Dar suficiente tiempo a que Innovat lance la búsqueda ajax y muestre los filtrados
 
-      // Intento 1: Buscar contenedor Select2 con texto vacio o corto
-      const openedViaSelect2 = await page.evaluate(() => {
-          // Buscar todos los elementos que parecen dropdowns Select2 (varios patrones de clases)
-          const candidates = [
-              ...Array.from(document.querySelectorAll('.select2-container')),
-              ...Array.from(document.querySelectorAll('[class*="select2-container"]')),
-          ];
-          const uniqueCandidates = Array.from(new Set(candidates));
-          const visible = uniqueCandidates.filter(c => (c as HTMLElement).offsetParent !== null);
-          console.log('select2 candidates visible:', visible.length);
-          const fmtContainer = visible.find((c, idx) => {
-              // Ignoramos el primer Select2 si hay varios, asumiendo que es el de "Alumno".
-              if (idx === 0 && visible.length > 1) return false;
-              const text = (c as HTMLElement).innerText || '';
-              // El seleccionador de alumno suele tener la matrícula, ej "(6580)"
-              return !/\(\d+\)/.test(text);
-          }) || (visible.length > 1 ? visible[1] : visible[0]);
-          if (fmtContainer) {
-              const clickTarget = (
-                  fmtContainer.querySelector('.select2-choice') ||
-                  fmtContainer.querySelector('.select2-selection') ||
-                  fmtContainer
-              ) as HTMLElement;
+      let matchFound = false;
+      
+      // 2. Loop de Flecha Abajo hasta encontrar coincidencia (límite 25 por si acaso)
+      for (let i = 0; i < 25; i++) {
+          
+          // Extraemos el texto de la opción brillante actual
+          const highlightedText = await page.evaluate(() => {
+              // En Innovat clásico con Select2 v3, la opción actual tiene 'select2-highlighted'
+              const s2ol = document.querySelector('.select2-highlighted');
+              if (s2ol) return s2ol.textContent?.trim().toLowerCase() || '';
+
+              // Por si acaso actualizan el Select2
+              const s2new = document.querySelector('.select2-results__option--highlighted');
+              if (s2new) return s2new.textContent?.trim().toLowerCase() || '';
               
-              clickTarget.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-              clickTarget.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-              clickTarget.click();
-              return 'clicked:' + fmtContainer.className.substring(0, 40);
+              // Fallback extremo
+              const sel = document.querySelectorAll('select')[1] as HTMLSelectElement;
+              if (sel && sel.selectedIndex >= 0) return sel.options[sel.selectedIndex].text.trim().toLowerCase();
+              
+              return '';
+          });
+
+          console.log(`[InnovatAgent] Opción resaltada [${i}]: "${highlightedText}". Evaluando con mesK="${mesK}"...`);
+          
+          let ok = false;
+          if (highlightedText !== '') {
+              if (esColegiaturaPura) {
+                  ok = highlightedText.includes(mesK) && !highlightedText.includes('anual') && !highlightedText.includes('estancia') && !highlightedText.includes('extrac') && !highlightedText.includes('clases');
+              } else {
+                  ok = highlightedText.includes(mesK) && highlightedText.includes(tipoK) && !highlightedText.includes('anual');
+              }
           }
-          return false;
-      });
-      console.log('[InnovatAgent] Select2 open attempt:', openedViaSelect2);
-      if (openedViaSelect2) {
-          await this.browser.wait(800);
-          formatOpened = true;
+
+          if (ok) {
+              console.log(`[InnovatAgent] ✅ ¡Coincidencia Exacta encontrada! Asentando con 'Enter'.`);
+              matchFound = true;
+              break;
+          }
+
+          console.log(`[InnovatAgent] Aún no coincide. Presionando 'Flecha Abajo'...`);
+          await page.keyboard.press('ArrowDown');
+          await this.browser.wait(300); // Pausa humana para permitir que la interfaz reaccione y cambie el highlight
       }
 
-      // Intento 2: Click en el segundo <select> visible (si no habia Select2 containers)
-      if (!formatOpened) {
-          const s2 = page.locator('select').nth(1);
-          if (await s2.isVisible({ timeout: 1000 }).catch(() => false)) {
-              await s2.click({ force: true });
-              await this.browser.wait(800);
-              formatOpened = true;
-              console.log('[InnovatAgent] Clicked second <select> directly');
-          }
-      }
-
-      // Paso B: Esperar a que aparezcan las opciones del dropdown
-      if (formatOpened) {
-          // Esperar resultados select2 o options del select
-          const resultsAppeared = await Promise.race([
-              page.waitForSelector('.select2-results li', { timeout: 6000 }).then(() => 'select2-results'),
-              page.waitForSelector('.select2-results__option', { timeout: 6000 }).then(() => 'select2-results__option'),
-          ]).catch(() => null);
-          console.log('[InnovatAgent] resultados dropdown: ' + resultsAppeared);
-
-          if (resultsAppeared) {
-              // Paso C: Iterar opciones y hacer click en la correcta
-              const resultItems = page.locator('.select2-results li, .select2-results__option');
-              const itemCount = await resultItems.count().catch(() => 0);
-              console.log('[InnovatAgent] items en dropdown: ' + itemCount);
-              let clicked = false;
-
-              for (let ii = 0; ii < itemCount; ii++) {
-                  const item = resultItems.nth(ii);
-                  const txt = ((await item.textContent().catch(() => '')) || '').toLowerCase();
-                  const ok = (mesK ? txt.includes(mesK) : true)
-                           && !txt.includes('anual');
-                  console.log('[InnovatAgent] item[' + ii + ']: "' + txt + '" ok=' + ok);
-                  if (ok && txt.length > 1) {
-                      await item.click({ force: true });
-                      await this.browser.wait(400);
-                      console.log('[InnovatAgent] ✅ Formato click: "' + txt + '"');
-                      clicked = true;
-                      break;
-                  }
-              }
-
-              if (!clicked && itemCount > 0) {
-                  console.log('[InnovatAgent] ⚠️ Ninguna coincidencia exacta. Ejecutando fallback: seleccionando la primera opción válida de la lista.');
-                  for (let ii = 0; ii < itemCount; ii++) {
-                      const item = resultItems.nth(ii);
-                      const txt = ((await item.textContent().catch(() => '')) || '').toLowerCase();
-                      // Evitamos la opción que dice "Seleccione..." o vacía
-                      if (txt.length > 3 && !txt.includes('seleccione') && !txt.includes('elegir')) {
-                          await item.click({ force: true });
-                          await this.browser.wait(400);
-                          console.log('[InnovatAgent] ✅ Formato click (fallback): "' + txt + '"');
-                          clicked = true;
-                          break;
-                      }
-                  }
-              }
-
-              if (!clicked) {
-                  console.warn('[InnovatAgent] ⚠️ No se pudo elegir opción, cerrando dropdown...');
-                  await page.keyboard.press('Escape');
-                  await this.browser.wait(300);
-              }
-          } else {
-              // No aparecieron resultados en formato Select2 - intentar con native select options
-              console.warn('[InnovatAgent] ⚠️ No aparecio dropdown Select2, intentando native select...');
-
-              // Esperar que el segundo select tenga opciones
-              await page.waitForFunction(() => {
-                  const sels = document.querySelectorAll('select');
-                  return sels.length > 1 && (sels[1] as HTMLSelectElement).options.length > 1;
-              }, { timeout: 6000 }).catch(() => null);
-
-              const s2Opts = await page.evaluate(() => {
-                  const sel = document.querySelectorAll('select')[1] as HTMLSelectElement;
-                  if (!sel) return [];
-                  return Array.from(sel.options).map(o => ({ t: o.text, v: o.value }));
-              });
-              console.log('[InnovatAgent] select[1] options after click:', JSON.stringify(s2Opts));
-
-              let bestV = s2Opts.find((o: { t: string; v: string }) => {
-                  const t = o.t.toLowerCase();
-                  return (mesK ? t.includes(mesK) : true) && !t.includes('anual');
-              });
-
-              if (!bestV && s2Opts.length > 1) {
-                  console.log('[InnovatAgent] ⚠️ Native fallback fallback: eligiendo primer formato valido');
-                  bestV = s2Opts.find((o: { t: string; v: string }) => o.t.length > 3 && !o.t.toLowerCase().includes('selecc'));
-              }
-              if (bestV) {
-                  await page.evaluate(({ idx, val }: { idx: number; val: string }) => {
-                      const sel = document.querySelectorAll('select')[idx] as HTMLSelectElement;
-                      if (sel) {
-                          sel.value = val;
-                          sel.dispatchEvent(new Event('change', { bubbles: true }));
-                          const jq = (window as any).$ || (window as any).jQuery;
-                          if (jq) jq(sel).trigger('change');
-                      }
-                  }, { idx: 1, val: bestV.v });
-                  console.log('[InnovatAgent] Native select set: "' + bestV.t + '"');
-                  await this.browser.wait(400);
-              }
-          }
+      if (matchFound) {
+          // Asentamos el concepto encontrado
+          await page.keyboard.press('Enter');
+          await this.browser.wait(600);
       } else {
-          console.warn('[InnovatAgent] ⚠️ No se pudo abrir el dropdown de formato');
+          console.warn(`[InnovatAgent] ⚠️ Bucle superó 25 intentos sin encontrar coincidencia. Forzando cierre del dropdown.`);
+          await page.keyboard.press('Escape');
+          await this.browser.wait(400);
       }
-      await this.browser.wait(300);
+
+
 
       // PASO 4: Activar checkbox "Tomar en cuenta para recargos"
       console.log(`[InnovatAgent] Paso 4: Activando recargos...`);

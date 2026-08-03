@@ -677,7 +677,6 @@ async function handleActionRequest(
         action,
         curp: collected.curp,
         campus: collected.campus,
-        matricula: collected.curp,
         conceptoId: collected.conceptoId,
       },
     }

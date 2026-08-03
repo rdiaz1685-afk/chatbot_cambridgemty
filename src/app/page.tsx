@@ -68,7 +68,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
   // Guardamos CURP y campus del alumno verificado para generar fichas directamente
-  const [alumnoVerificado, setAlumnoVerificado] = useState<{ curp: string; campus: string } | null>(null)
+  const [alumnoVerificado, setAlumnoVerificado] = useState<{ curp: string; campus: string; matricula?: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -176,6 +176,7 @@ export default function ChatPage() {
     curp?: string
     campus?: string
     conceptoId?: string
+    matricula?: string
   }) => {
     const loadingMessage: Message = {
       id: `loading-${Date.now()}`,
@@ -194,6 +195,7 @@ export default function ChatPage() {
           curp: actionData.curp,
           campus: actionData.campus,
           conceptoId: actionData.conceptoId,
+          matricula: actionData.matricula,
         }),
       })
 
@@ -215,7 +217,7 @@ export default function ChatPage() {
         }
         // Si fue un estado de cuenta exitoso, guardar CURP y campus para fichas directas
         if (data.data?.tipo === 'estado_cuenta' && data.data?.estudiante?.curp && actionData.campus) {
-          setAlumnoVerificado({ curp: data.data.estudiante.curp, campus: actionData.campus })
+          setAlumnoVerificado({ curp: data.data.estudiante.curp, campus: actionData.campus, matricula: data.data.estudiante.matricula })
         }
         setMessages(prev => [...prev, resultMessage])
       } else {
@@ -457,7 +459,7 @@ export default function ChatPage() {
                                       onClick={() => {
                                         const datos = alumnoVerificado
                                         if (datos) {
-                                          executeAutomation({ action: 'generar_ficha', curp: datos.curp, campus: datos.campus, conceptoId: c.descripcion })
+                                          executeAutomation({ action: 'generar_ficha', curp: datos.curp, campus: datos.campus, conceptoId: c.descripcion, matricula: datos.matricula })
                                         } else {
                                           sendMessage(`Generar ficha para ${c.descripcion}`)
                                         }

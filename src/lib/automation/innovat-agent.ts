@@ -293,9 +293,9 @@ export class InnovatAgent {
   private async selectCampusAndCiclo(campus: string): Promise<AutomationResult> {
     try {
       const page = this.browser.getPage();
-      // campus viene como "MITRAS 2025-2026" desde getInnovatCampusValue()
+      // campus viene como "MITRAS 2026-2027" desde getInnovatCampusValue()
       const campusName = campus.split(' ')[0];                     // "MITRAS"
-      const cicloTarget = campus.split(' ').slice(1).join(' ');    // "2025-2026"
+      const cicloTarget = campus.split(' ').slice(1).join(' ');    // "2026-2027"
       console.log(`[InnovatAgent] Seleccionando campus: ${campusName} | Ciclo: ${cicloTarget}`);
 
       // Cerrar dropdowns activos
@@ -508,29 +508,41 @@ export class InnovatAgent {
     try {
       const page = this.browser.getPage();
       const curpUpper = curp.toUpperCase();
-      
-      // 1. Detectar índices de columnas dinámicamente
-      const headers = await page.locator('table thead th').all();
-      let matriculaIdx = 0; // Por defecto intentamos la 0
-      let nombreIdx = 1;
 
-      console.log(`[InnovatAgent] Analizando encabezados de tabla...`);
-      for (let i = 0; i < headers.length; i++) {
-        const text = (await headers[i].innerText().catch(() => '')).toUpperCase().trim();
-        if (text.includes('MATR')) {
-          matriculaIdx = i;
-          console.log(`[InnovatAgent] -> Columna Matrícula hallada en índice ${i}`);
-        }
-        if (text.includes('NOMBR')) {
-          nombreIdx = i;
-          console.log(`[InnovatAgent] -> Columna Nombre hallada en índice ${i}`);
+      // 1. Ubicar la tabla real del reporte (la página puede tener otras tablas
+      // ocultas, p.ej. un calendario, cuyos <th> contaminarían un query global)
+      console.log(`[InnovatAgent] Buscando la tabla del reporte de alumnos...`);
+      const allTables = page.locator('table');
+      const tableCount = await allTables.count();
+
+      let reportTable = allTables.first();
+      let headerTexts: string[] = [];
+      let matriculaIdx = -1;
+      let nombreIdx = -1;
+
+      for (let t = 0; t < tableCount; t++) {
+        const candidate = allTables.nth(t);
+        const ths = await candidate.locator('thead th').all();
+        const texts = await Promise.all(ths.map(th => th.innerText().catch(() => '')));
+        const upper = texts.map(x => x.toUpperCase().trim());
+        const matrI = upper.findIndex(x => x.includes('MATR'));
+        const curpI = upper.findIndex(x => x.includes('CURP'));
+        if (matrI !== -1 && curpI !== -1) {
+          reportTable = candidate;
+          headerTexts = upper;
+          matriculaIdx = matrI;
+          nombreIdx = upper.findIndex(x => x.includes('NOMBR'));
+          console.log(`[InnovatAgent] -> Tabla del reporte hallada (índice de tabla ${t})`);
+          break;
         }
       }
+      console.log(`[InnovatAgent] DEBUG headers (${headerTexts.length}): ${headerTexts.map((t, i) => `[${i}]${t}`).join(' | ')}`);
+      console.log(`[InnovatAgent] -> Columna Matrícula hallada en índice ${matriculaIdx} | Columna Nombre en índice ${nombreIdx}`);
 
-      // 2. Buscar la fila del alumno por CURP
+      // 2. Buscar la fila del alumno por CURP, escopada a la tabla del reporte
       console.log(`[InnovatAgent] Buscando CURP en la tabla: ${curpUpper} ...`);
-      const row = page.locator('table tbody tr').filter({ hasText: curpUpper }).first();
-      
+      const row = reportTable.locator('tbody tr').filter({ hasText: curpUpper }).first();
+
       const isVisible = await row.waitFor({ state: 'visible', timeout: 8000 })
                               .then(() => true)
                               .catch(() => false);
@@ -538,19 +550,31 @@ export class InnovatAgent {
       if (isVisible) {
         const cells = await row.locator('td').all();
         const cellTexts = await Promise.all(cells.map(c => c.innerText().catch(() => '')));
-        
+
+        console.log(`[InnovatAgent] DEBUG cells (${cellTexts.length}): ${cellTexts.map((t, i) => `[${i}]${t}`).join(' | ')}`);
         console.log(`[InnovatAgent] Fila encontrada: ${cellTexts.join(' | ')}`);
 
-        // ESTRATEGIA DE HIERRO: Buscar por contenido, no por posición
-        // Matrícula: Es un dato de solo números, usualmente entre 4 y 8 dígitos.
-        let matricula = cellTexts.find(t => /^\d{4,8}$/.test(t.trim()))?.trim();
-        
-        // Nombre: El texto más largo que NO sea el CURP y NO sea solo números
-        const nombre = cellTexts.find(t => 
-           t.trim().length > 5 && 
-           !t.includes(curpUpper) && 
-           !/^\d+$/.test(t.trim())
-        )?.trim() || 'Alumno';
+        // Preferir la celda en el índice de columna detectado por encabezado.
+        // Sólo si ese índice no cuadra (tabla sin encabezados fiables) caemos
+        // al heurístico de "primer número de 4-8 dígitos".
+        let matricula: string | undefined;
+        if (matriculaIdx >= 0 && matriculaIdx < cellTexts.length && /^\d{3,8}$/.test(cellTexts[matriculaIdx].trim())) {
+          matricula = cellTexts[matriculaIdx].trim();
+        } else {
+          matricula = cellTexts.find(t => /^\d{4,8}$/.test(t.trim()))?.trim();
+        }
+
+        // Nombre: preferir columna detectada; si no, el texto más largo que no sea CURP ni sólo números
+        let nombre: string;
+        if (nombreIdx >= 0 && nombreIdx < cellTexts.length && cellTexts[nombreIdx].trim().length > 0) {
+          nombre = cellTexts[nombreIdx].trim();
+        } else {
+          nombre = cellTexts.find(t =>
+             t.trim().length > 5 &&
+             !t.includes(curpUpper) &&
+             !/^\d+$/.test(t.trim())
+          )?.trim() || 'Alumno';
+        }
 
         // Caso especial de seguridad para este cliente
         if (curpUpper.includes('MOGR141020') && (!matricula || matricula === '13')) {

@@ -17,7 +17,7 @@ export const config = {
       password: process.env.INNOVAT_PASSWORD || '',
     },
     // Ciclo escolar actual (siempre el vigente)
-    currentCiclo: '2025-2026',
+    currentCiclo: '2026-2027',
   },
   
   automation: {
@@ -197,7 +197,7 @@ REGLAS DE TRATO HUMANO:
 REGLAS TÉCNICAS:
 - El CURP tiene 18 caracteres.
 - Los campus son: MITRAS, CUMBRES, NORTE, ANAHUAC y DOMINIO.
-- El ciclo escolar actual es 2025-2026.
+- El ciclo escolar actual es 2026-2027.
 
 Responde siempre en español y de forma concisa.`,
 
@@ -242,37 +242,37 @@ Responde SOLO con el JSON:
 
 /**
  * Campuses disponibles
- * Formato: valor en Innovat = "CAMPUS 2025-2026"
+ * Formato: valor en Innovat = "CAMPUS 2026-2027"
  */
 export const campuses = [
-  { 
-    id: 'mitras', 
+  {
+    id: 'mitras',
     nombre: 'Mitras',
-    innovatValue: 'MITRAS 2025-2026',
+    innovatValue: 'MITRAS 2026-2027',
     keywords: ['mitras', 'mitra']
   },
-  { 
-    id: 'cumbres', 
+  {
+    id: 'cumbres',
     nombre: 'Cumbres',
-    innovatValue: 'CUMBRES 2025-2026',
+    innovatValue: 'CUMBRES 2026-2027',
     keywords: ['cumbres', 'cumbre']
   },
-  { 
-    id: 'norte', 
+  {
+    id: 'norte',
     nombre: 'Norte',
-    innovatValue: 'NORTE 2025-2026',
+    innovatValue: 'NORTE 2026-2027',
     keywords: ['norte']
   },
-  { 
-    id: 'anahuac', 
+  {
+    id: 'anahuac',
     nombre: 'Anahuac',
-    innovatValue: 'ANAHUAC 2025-2026',
+    innovatValue: 'ANAHUAC 2026-2027',
     keywords: ['anahuac', 'anahuak', 'anáhuac']
   },
-  { 
-    id: 'dominio', 
+  {
+    id: 'dominio',
     nombre: 'Dominio',
-    innovatValue: 'DOMINIO 2025-2026',
+    innovatValue: 'DOMINIO 2026-2027',
     keywords: ['dominio']
   },
 ];
@@ -296,7 +296,8 @@ export function getInnovatCampusValue(campusInput: string): string | null {
  * Ciclos escolares disponibles
  */
 export const ciclosEscolares = [
-  { id: '2025-2026', nombre: '2025-2026', current: true },
+  { id: '2026-2027', nombre: '2026-2027', current: true },
+  { id: '2025-2026', nombre: '2025-2026', current: false },
   { id: '2024-2025', nombre: '2024-2025', current: false },
 ];
 
